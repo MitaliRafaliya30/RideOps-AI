@@ -1,6 +1,7 @@
-def main():
-    print("Hello from rideops-ai!")
+from database.config.db_config import get_connection
 
+conn = get_connection()
 
-if __name__ == "__main__":
-    main()
+print("Connected Successfully!")
+
+conn.close()

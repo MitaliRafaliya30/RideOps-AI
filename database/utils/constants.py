@@ -5,3 +5,9 @@ REFERENCE_TABLES = [
     "master.membership_tiers",
     "master.vehicle_types",
 ]
+
+MASTER_TABLES = [
+    "master.drivers",
+    "master.passengers",
+    "master.vehicles",
+]

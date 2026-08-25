@@ -35,27 +35,53 @@ So this one generates its own bad data on purpose. A Python simulator emits real
 The result is a platform where you can point at any figure on the dashboard and trace it back to source, and where "data quality" is a number you can query, not a claim in a README.
 
 
-## Data sources
-# 1. Operational events (streaming)
-A Python simulator generates realistic ride lifecycles and streams them to Azure Event Hubs at roughly 9 rides/sec (~50 events/sec).
-Lifecycle: requested → assigned → accepted → arrived → started → completed, with cancellation possible at any pre-completion stage.
-Entity pool: passengers, drivers, vehicles and zones are drawn from the live PostgreSQL master data, so every foreign key in the event stream is genuinely resolvable. Nothing is fabricated.
+## 📥 Data Sources
 
-Modules:
+### 1. Operational Events — Streaming
 
-Module	Responsibility
-entity_pool.py	Loads real entities from PostgreSQL
-timing_model.py	Realistic inter-stage delays and trip durations
-fare_calculator.py	NYC-style fare breakdown (base, distance, time, surcharges, tips)
-ride_event_generator.py	Assembles clean ride lifecycles
-defect_injector.py	Corrupts a configurable share of them
-event_hub_emitter.py	Batches and sends to Event Hubs
+A Python-based simulator generates realistic ride lifecycles and streams them to Azure Event Hubs at approximately **9 rides/sec (~50 events/sec)**.
 
-# 2. Historical market data (batch)
-Public NYC TLC High Volume For-Hire Vehicle records, used as a market benchmark. Scoped to HV0003 (Uber) per ADR-004, reducing 22M rows to 15.35M.
-Profiled before ingestion. Four data quality findings were documented and resolved as explicit flag, don't drop decisions rather than silent filtering.
+**Ride lifecycle:**
 
-#3. Master and reference data (batch snapshot)
-Nine PostgreSQL tables extracted through a parameterized ADF Get Metadata → ForEach → Copy pattern over a Self-Hosted Integration Runtime.
-passengers · drivers · vehicles · vehicle_types · membership_tiers · payment_methods · ride_status · cancellation_reasons · zone_lookup
-Adding a tenth table is a config change, not a code change.
+`requested → assigned → accepted → arrived → started → completed`
+
+Cancellation can occur at any pre-completion stage.
+
+Passengers, drivers, vehicles, and zones are drawn from live PostgreSQL master data, ensuring that every foreign key in the event stream is genuinely resolvable.
+
+#### Core Modules
+
+| Module | Responsibility |
+|---|---|
+| `entity_pool.py` | Loads real entities from PostgreSQL |
+| `timing_model.py` | Generates realistic inter-stage delays and trip durations |
+| `fare_calculator.py` | Calculates NYC-style fares including base fare, distance, time, surcharges, and tips |
+| `ride_event_generator.py` | Assembles complete ride lifecycles |
+| `defect_injector.py` | Introduces a configurable share of data defects |
+| `event_hub_emitter.py` | Batches and sends events to Azure Event Hubs |
+
+---
+
+### 2. Historical Market Data — Batch
+
+Public **NYC TLC High Volume For-Hire Vehicle (HVFHV)** records are used as a historical market benchmark.
+
+The dataset is scoped to **HV0003 (Uber)** according to **ADR-004**, reducing the original dataset from approximately **22 million rows to 15.35 million rows**.
+
+The data was profiled before ingestion, and four data quality findings were documented and handled using explicit **"flag, don't drop"** decisions rather than silently filtering problematic records.
+
+---
+
+### 3. Master & Reference Data — Batch Snapshot
+
+Nine PostgreSQL master and reference tables are extracted through a parameterized Azure Data Factory pipeline using the following pattern:
+
+**`Get Metadata → ForEach → Copy`**
+
+The pipeline runs through a **Self-Hosted Integration Runtime**.
+
+**Extracted tables:**
+
+`passengers` · `drivers` · `vehicles` · `vehicle_types` · `membership_tiers` · `payment_methods` · `ride_status` · `cancellation_reasons` · `zone_lookup`
+
+Adding a new table does not require creating a new pipeline. It is handled as a **configuration change rather than a code change**.

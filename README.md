@@ -34,158 +34,87 @@ Most portfolio pipelines move clean data from A to B and call it done. Real pipe
 So this one generates its own bad data on purpose. A Python simulator emits realistic ride lifecycle events with eight distinct defect types injected at configurable rates. The pipeline's job is to catch each one at the layer that can actually detect it, and to prove it caught them with a measured scorecard rather than an assertion.
 The result is a platform where you can point at any figure on the dashboard and trace it back to source, and where "data quality" is a number you can query, not a claim in a README.
 
-
 ## 📥 Data Sources
 
-### 1. Operational Events — Streaming
+RideOps AI combines three heterogeneous data sources:
 
-A Python-based simulator generates realistic ride lifecycles and streams them to Azure Event Hubs at approximately **9 rides/sec (~50 events/sec)**.
+### ⚡ Operational Events — Streaming
 
-**Ride lifecycle:**
+A Python simulator generates realistic ride lifecycles and streams approximately **50 events/sec** to Azure Event Hubs.
 
 `requested → assigned → accepted → arrived → started → completed`
 
 Cancellation can occur at any pre-completion stage.
 
-Passengers, drivers, vehicles, and zones are drawn from live PostgreSQL master data, ensuring that every foreign key in the event stream is genuinely resolvable.
+Passengers, drivers, vehicles, and zones are sampled from live PostgreSQL master data, ensuring that generated events maintain valid foreign-key relationships.
 
-#### Core Modules
+The simulator includes:
 
-| Module | Responsibility |
-|---|---|
-| `entity_pool.py` | Loads real entities from PostgreSQL |
-| `timing_model.py` | Generates realistic inter-stage delays and trip durations |
-| `fare_calculator.py` | Calculates NYC-style fares including base fare, distance, time, surcharges, and tips |
-| `ride_event_generator.py` | Assembles complete ride lifecycles |
-| `defect_injector.py` | Introduces a configurable share of data defects |
-| `event_hub_emitter.py` | Batches and sends events to Azure Event Hubs |
+- Realistic lifecycle timing and trip durations
+- NYC-style fare calculation
+- Configurable data-quality defect injection
+- Batched event delivery to Azure Event Hubs
+
+### 📊 Historical Market Data — Batch
+
+Public NYC TLC HVFHV trip records provide a historical market benchmark.
+
+The dataset is scoped to **HV0003 (Uber)**, reducing approximately **22M source records to 15.35M records**. Data quality issues identified during profiling follow an explicit **flag, don't drop** strategy.
+
+### 🗄️ Master & Reference Data — Batch Snapshot
+
+Nine PostgreSQL tables are ingested through a metadata-driven Azure Data Factory pipeline:
+
+`Get Metadata → ForEach → Copy`
+
+The pipeline runs through a Self-Hosted Integration Runtime and is configuration-driven, allowing additional source tables to be added without creating new pipeline logic.
 
 ---
 
-### 2. Historical Market Data — Batch
+## 🏗️ Medallion Architecture
 
-Public **NYC TLC High Volume For-Hire Vehicle (HVFHV)** records are used as a historical market benchmark.
-
-The dataset is scoped to **HV0003 (Uber)** according to **ADR-004**, reducing the original dataset from approximately **22 million rows to 15.35 million rows**.
-
-The data was profiled before ingestion, and four data quality findings were documented and handled using explicit **"flag, don't drop"** decisions rather than silently filtering problematic records.
-
----
-
-### 3. Master & Reference Data — Batch Snapshot
-
-Nine PostgreSQL master and reference tables are extracted through a parameterized Azure Data Factory pipeline using the following pattern:
-
-**`Get Metadata → ForEach → Copy`**
-
-The pipeline runs through a **Self-Hosted Integration Runtime**.
-
-## 🏗️ The Medallion Architecture
-
-The RideOps data platform follows a **Bronze → Silver → Gold medallion architecture**, separating raw ingestion, data quality and conformance, and analytics-ready consumption.
+RideOps AI follows a **Bronze → Silver → Gold lakehouse architecture**.
 
 ### 🥉 Bronze — Raw Ingestion
 
-> **Rule:** Land data as-is, validate structure only, quarantine what fails, and attach lineage. **No business logic.**
+Raw streaming, historical, and master data is landed with schema validation, quarantine handling, and full source lineage.
 
-| Tables | Source | Read Pattern |
-|---|---|---|
-| `ride_events_raw`, `ride_events_quarantine` | Azure Event Hubs | Structured Streaming (Kafka) |
-| `fhvhv_trips_raw` | ADLS Gen2 | Auto Loader with schema evolution |
-| `9 × *_raw` reference tables | ADLS Gen2 | Batch read generated from a control list |
-
-A single internal view parses each event once and branches records into **valid** and **quarantined** outputs.
-
-Validation is performed strictly at the **single-row level**:
-
-- Malformed JSON that cannot be parsed against the expected schema
-- Null always-required fields: `event_id`, `ride_id`, `event_type`, and `event_timestamp`
-- Null stage-required fields, such as `driver_id` on an `assigned` event
-- Invalid `event_type` values outside the seven legal lifecycle events
-- Out-of-range fare and distance values, including both **negative** and **absurdly high** values
-
-Every row carries ingestion and source lineage through `_ingested_at`, `_source`, Kafka metadata (`_kafka_topic`, `_partition`, `_offset`), or file metadata (`_source_file`, `_file_modified_at`).
-
----
+- Event Hubs → Structured Streaming
+- ADLS Gen2 → Auto Loader
+- PostgreSQL snapshots → Metadata-driven batch ingestion
+- Invalid records → Quarantine tables
+- Source and ingestion metadata attached to every record
 
 ### 🥈 Silver — Cleansed & Conformed
 
-> **Rule:** Deduplicate, standardize, track history, enforce referential integrity, and reconstruct business entities.**
+The Silver layer handles data quality, conformance, and entity reconstruction.
 
-#### Master Data — SCD Type 2
-
-Master data:
-
-- `sv_passengers`
-- `sv_drivers`
-- `sv_vehicles`
-
-uses **SCD Type 2** through `create_auto_cdc_from_snapshot_flow`, chosen because PostgreSQL arrives as a **full snapshot rather than a change feed**.
-
-Referential integrity is validated **before** history tracking, ensuring that only resolvable records enter the SCD Type 2 pipeline.
-
-#### Streaming Event Deduplication
-
-Streaming events flow through a **45-minute watermark** and two separate deduplication passes:
-
-```python
-.withWatermark("event_timestamp", "45 minutes")
-.dropDuplicatesWithinWatermark(["event_id"])
-.dropDuplicatesWithinWatermark(["ride_id", "event_type"])
-```
-
-The two rules handle different failure modes:
-
-- **Exact duplicate events** with the same `event_id`
-- **Retry events with a new ID** but the same `ride_id` and `event_type`
-
-`dropDuplicatesWithinWatermark` is used instead of standard `dropDuplicates` to prevent unbounded state growth.
-
-#### Ride State Reconstruction
-
-Individual lifecycle events are reconstructed into **one row per `ride_id`** using Auto CDC with:
-
-```python
-ignore_null_updates=True
-```
-
-This preserves milestone values from earlier events when later events only contain newly updated fields.
-
-Each reconstructed ride includes:
-
-- Lifecycle milestone timestamps
-- `final_status`
-- `cancellation_stage`
-- Four duration measures
-- `is_stale` flag for rides remaining in-flight for more than two hours
-
----
+- SCD Type 2 history tracking for master data
+- Referential integrity validation
+- Watermark-based streaming deduplication
+- Duplicate detection by both `event_id` and lifecycle stage
+- Ride lifecycle reconstruction into one row per `ride_id`
+- Auto CDC with `ignore_null_updates=True`
+- Duration metrics, cancellation analysis, and stale ride detection
 
 ### 🥇 Gold — Analytics Star Schema
 
-> **Rule:** Define grain, assign surrogate keys, and shape data for consumption. **Business logic ends here.**
+The Gold layer provides analytics-ready dimensional models.
 
 | Type | Tables |
 |---|---|
-| **Dimensions (8)** | `dim_date`, `dim_zone`, `dim_passenger`, `dim_driver`, `dim_vehicle`, `dim_payment_method`, `dim_ride_status`, `dim_cancellation_reason` |
-| **Facts (3)** | `fact_ride`, `fact_ride_event`, `fact_fhvhv_trip` |
-| **Analytics Marts (3)** | `agg_zone_hourly`, `agg_driver_daily`, `agg_revenue_daily` |
+| **Dimensions** | 8 |
+| **Facts** | 3 |
+| **Analytics Marts** | 3 |
 
-#### Surrogate Key Strategy
+Key models include:
 
-Surrogate keys are sized according to the characteristics of each table.
+`dim_date` · `dim_zone` · `dim_passenger` · `dim_driver` · `dim_vehicle`
 
-Stable dimensions that can be fully rebuilt use:
+`fact_ride` · `fact_ride_event` · `fact_fhvhv_trip`
 
-```python
-row_number()
-```
+`agg_zone_hourly` · `agg_driver_daily` · `agg_revenue_daily`
 
-`fact_fhvhv_trip` uses a **SHA-256 hash of a composite fingerprint** because the table continuously grows as new monthly data arrives. This prevents existing surrogate keys from changing during future rebuilds, which would happen if `row_number()` were recalculated.
+Surrogate key generation is selected based on table characteristics, using rebuild-safe keys for stable dimensions and deterministic SHA-256 fingerprints for continuously growing historical fact data.
 
 
-**Extracted tables:**
-
-`passengers` · `drivers` · `vehicles` · `vehicle_types` · `membership_tiers` · `payment_methods` · `ride_status` · `cancellation_reasons` · `zone_lookup`
-
-Adding a new table does not require creating a new pipeline. It is handled as a **configuration change rather than a code change**.

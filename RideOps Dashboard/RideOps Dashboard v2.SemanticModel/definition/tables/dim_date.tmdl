@@ -1,0 +1,129 @@
+table dim_date
+	lineageTag: 663a73e7-8bcd-498f-8bbf-97d44fc7d7bd
+	dataCategory: Time
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 67ce0f41-2225-4a2a-8186-35f328ece5bf
+		summarizeBy: sum
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column full_date
+		dataType: dateTime
+		isUnique
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 55584690-6988-4e79-902c-6ce190abcfa8
+		summarizeBy: none
+		sourceColumn: full_date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column year
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: bb3a9025-1edd-4576-8dd7-39eb252424bf
+		summarizeBy: sum
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column quarter
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: b081f405-7c65-48ef-9d18-c1dd2397666c
+		summarizeBy: sum
+		sourceColumn: quarter
+
+		annotation SummarizationSetBy = Automatic
+
+	column month
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 40b3fc00-55d6-4bbb-900c-dd258902e2f6
+		summarizeBy: sum
+		sourceColumn: month
+
+		annotation SummarizationSetBy = Automatic
+
+	column month_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: c40d8708-2d34-440b-992c-5830c8580366
+		summarizeBy: none
+		sourceColumn: month_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column day_of_month
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 93627d0d-77ce-407f-987c-f39af6b77e2c
+		summarizeBy: sum
+		sourceColumn: day_of_month
+
+		annotation SummarizationSetBy = Automatic
+
+	column day_of_week
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: eacf8e39-39e3-4523-9ea7-1a454b27a442
+		summarizeBy: sum
+		sourceColumn: day_of_week
+
+		annotation SummarizationSetBy = Automatic
+
+	column day_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 063171c3-4adf-4060-b52e-ea79d636ac7b
+		summarizeBy: none
+		sourceColumn: day_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column week_of_year
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 414df32a-900c-4ff3-b7f8-88f83a589471
+		summarizeBy: sum
+		sourceColumn: week_of_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_weekend
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 03893238-9668-4b46-afd1-978e5d841165
+		summarizeBy: none
+		sourceColumn: is_weekend
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_date = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_date_View = gold_Schema{[Name="dim_date",Kind="View"]}[Data]
+				in
+				    dim_date_View
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,15 @@
+{
+  "name": "RideOps Executive",
+  "dataColors": [
+    "#1F3864",
+    "#2E75B6",
+    "#4A90D9",
+    "#7FB0E0",
+    "#A8C8E8",
+    "#C6572A",
+    "#E8A33D",
+    "#5B8C5A"
+  ],
+  "foreground": "#1F3864",
+  "tableAccent": "#1F3864"
+}

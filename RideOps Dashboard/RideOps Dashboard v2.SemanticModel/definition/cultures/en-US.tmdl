@@ -1,0 +1,242 @@
+cultureInfo en-US
+
+	linguisticMetadata =
+			{
+			  "Version": "2.0.0",
+			  "Language": "en-US",
+			  "Entities": {
+			    "dim_driver.driver_name": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dim_driver",
+			          "ConceptualProperty": "driver_name"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Driver Name": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dim_driver.rating": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dim_driver",
+			          "ConceptualProperty": "rating"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Rating": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dq_defect_scorecard.defect_id": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dq_defect_scorecard",
+			          "ConceptualProperty": "defect_id"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Defect Id": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dq_defect_scorecard.defect_name": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dq_defect_scorecard",
+			          "ConceptualProperty": "defect_name"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Defect Name": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dq_defect_scorecard.layer": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dq_defect_scorecard",
+			          "ConceptualProperty": "layer"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Layer": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dq_defect_scorecard.count": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dq_defect_scorecard",
+			          "ConceptualProperty": "count"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Count": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dq_defect_scorecard.notes": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dq_defect_scorecard",
+			          "ConceptualProperty": "notes"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Notes": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dim_date.full_date": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dim_date",
+			          "ConceptualProperty": "full_date"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Date": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dim_zone.zone_name": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dim_zone",
+			          "ConceptualProperty": "zone_name"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Zone": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dim_cancellation_reason.reason_category": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dim_cancellation_reason",
+			          "ConceptualProperty": "reason_category"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Cancellation Reason": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "dim_zone.borough": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "dim_zone",
+			          "ConceptualProperty": "borough"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Borough": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    }
+			  }
+			}
+		contentType: json
+

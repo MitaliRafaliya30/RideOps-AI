@@ -1,0 +1,88 @@
+table dim_driver
+	lineageTag: 6a4f2c0b-0fdb-4ff9-aecb-2475f23620e8
+
+	column driver_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 6da9eb10-a406-4444-967d-a513fb4c61a4
+		summarizeBy: sum
+		sourceColumn: driver_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 0537361f-eb78-44fe-9604-84f66d1a1b8a
+		summarizeBy: sum
+		sourceColumn: driver_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_code
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 6d77a1fc-d156-46c4-88f5-788633d8ea39
+		summarizeBy: none
+		sourceColumn: driver_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0a54ac1d-4534-41fa-a097-38b7163cb8e4
+		summarizeBy: none
+		sourceColumn: driver_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column rating
+		dataType: double
+		sourceProviderType: decimal(3, 2)
+		lineageTag: 0a3b1601-fca2-4e89-8db0-76079d65e1cd
+		summarizeBy: sum
+		sourceColumn: rating
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column experience_years
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 6c76e2c6-e678-40e7-8a7d-1a64df1fbadb
+		summarizeBy: sum
+		sourceColumn: experience_years
+
+		annotation SummarizationSetBy = Automatic
+
+	column join_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 5c9ca87b-bc6d-4e81-af15-c4ffae7b567b
+		summarizeBy: none
+		sourceColumn: join_date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition dim_driver = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_driver_View = gold_Schema{[Name="dim_driver",Kind="View"]}[Data]
+				in
+				    dim_driver_View
+
+	annotation PBI_ResultType = Table
+

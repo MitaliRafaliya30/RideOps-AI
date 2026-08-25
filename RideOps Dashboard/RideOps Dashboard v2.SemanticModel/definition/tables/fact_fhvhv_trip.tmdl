@@ -1,0 +1,358 @@
+table fact_fhvhv_trip
+	lineageTag: cd85eaa6-2285-4c2d-b040-9c60f7ea7a85
+
+	column trip_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 89f76f45-1915-49f3-85d4-eb03612581ba
+		summarizeBy: none
+		sourceColumn: trip_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 0ed6902e-9088-49b4-b4bf-306937db664a
+		summarizeBy: sum
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column hvfhs_license_num
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 22b7d1c1-7afe-45ac-9113-097cd78f49c3
+		summarizeBy: none
+		sourceColumn: hvfhs_license_num
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 10aa6b4b-a737-456b-8d05-5648e36806fe
+		summarizeBy: sum
+		sourceColumn: pickup_zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column dropoff_zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: eb748d1e-ead5-4464-b1bb-203e6073a3a8
+		summarizeBy: sum
+		sourceColumn: dropoff_zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column request_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 8270ccda-8c24-42b3-90f2-271f58071664
+		summarizeBy: none
+		sourceColumn: request_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column on_scene_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 41172e31-5f8d-46a1-a100-9577e59842e5
+		summarizeBy: none
+		sourceColumn: on_scene_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: d948d678-f053-405d-9f21-65db39fc43c0
+		summarizeBy: none
+		sourceColumn: pickup_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column dropoff_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 41443898-0443-46d3-b42e-3793dea957a0
+		summarizeBy: none
+		sourceColumn: dropoff_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_hour
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: fb456327-f0db-4bf1-9659-ae8ccf28c77a
+		summarizeBy: sum
+		sourceColumn: pickup_hour
+
+		annotation SummarizationSetBy = Automatic
+
+	column trip_miles
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6153a016-708c-443e-ba04-b0c42bfa2548
+		summarizeBy: sum
+		sourceColumn: trip_miles
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column trip_time_sec
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 02ae8a59-a8ca-47ee-9d09-5e02ec18515d
+		summarizeBy: sum
+		sourceColumn: trip_time_sec
+
+		annotation SummarizationSetBy = Automatic
+
+	column computed_duration_sec
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 49b82570-0b2d-48ca-af96-df95288c220c
+		summarizeBy: sum
+		sourceColumn: computed_duration_sec
+
+		annotation SummarizationSetBy = Automatic
+
+	column duration_variance_sec
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 1666af51-1e51-4b69-a0c2-6864f3dbbf00
+		summarizeBy: sum
+		sourceColumn: duration_variance_sec
+
+		annotation SummarizationSetBy = Automatic
+
+	column wait_time_sec
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 80731656-60fa-4e0e-ad5c-c429177d8be6
+		summarizeBy: sum
+		sourceColumn: wait_time_sec
+
+		annotation SummarizationSetBy = Automatic
+
+	column base_passenger_fare
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: 413d9873-8323-4742-b028-9b1207ea6bb9
+		summarizeBy: sum
+		sourceColumn: base_passenger_fare
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tolls
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: 7cb133e7-e59c-4a63-bf83-0c96bd0c551b
+		summarizeBy: sum
+		sourceColumn: tolls
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column bcf
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: 4567cad6-dda8-4135-a3bd-6fdda11d1417
+		summarizeBy: sum
+		sourceColumn: bcf
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sales_tax
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: df4640af-89ee-43c0-9eba-d26fc9a6e4bc
+		summarizeBy: sum
+		sourceColumn: sales_tax
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column congestion_surcharge
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: d8155618-5866-4c07-8662-95e3699940c6
+		summarizeBy: sum
+		sourceColumn: congestion_surcharge
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column airport_fee
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: d1ef403b-6886-4ad2-8bcf-4ffd7bdc9612
+		summarizeBy: sum
+		sourceColumn: airport_fee
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cbd_congestion_fee
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: 177818bb-c114-45f8-b4ef-db1d103dc412
+		summarizeBy: sum
+		sourceColumn: cbd_congestion_fee
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tips
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: e198c3be-667f-4c71-9b35-1ebcf200fe3b
+		summarizeBy: sum
+		sourceColumn: tips
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column driver_pay
+		dataType: double
+		sourceProviderType: decimal(10, 2)
+		lineageTag: 436e7198-2f81-4b72-892f-2b1581fc5293
+		summarizeBy: sum
+		sourceColumn: driver_pay
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column total_fare
+		dataType: double
+		sourceProviderType: decimal(17, 2)
+		lineageTag: 85881a91-32d1-4183-944e-4f46ff738a4a
+		summarizeBy: sum
+		sourceColumn: total_fare
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column shared_request_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 3bfc2151-6d33-49bf-9a94-c928576862f8
+		summarizeBy: none
+		sourceColumn: shared_request_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column shared_match_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 8f9ffdc1-9ffa-4323-b4a3-d18c72eaa1d1
+		summarizeBy: none
+		sourceColumn: shared_match_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column access_a_ride_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 94a80745-5dec-4b4b-8901-ab3e34d417b8
+		summarizeBy: none
+		sourceColumn: access_a_ride_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column wav_request_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: c1d333dc-958e-4d10-9fde-baa64bfdeaac
+		summarizeBy: none
+		sourceColumn: wav_request_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column wav_match_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: fd80a4c6-585d-4d66-ab7f-a29beba3a8a0
+		summarizeBy: none
+		sourceColumn: wav_match_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column has_negative_fare
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 5a9132aa-9e49-4f9b-8070-d9339625c30e
+		summarizeBy: none
+		sourceColumn: has_negative_fare
+
+		annotation SummarizationSetBy = Automatic
+
+	column has_negative_driver_pay
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 06ccfac9-0e5e-4a3b-b046-ced210a0c959
+		summarizeBy: none
+		sourceColumn: has_negative_driver_pay
+
+		annotation SummarizationSetBy = Automatic
+
+	column has_timestamp_anomaly
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: c24f841a-6040-406e-b0f7-d784eb9d5301
+		summarizeBy: none
+		sourceColumn: has_timestamp_anomaly
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_fhvhv_trip = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    fact_fhvhv_trip_View = gold_Schema{[Name="fact_fhvhv_trip",Kind="View"]}[Data]
+				in
+				    fact_fhvhv_trip_View
+
+	annotation PBI_ResultType = Table
+

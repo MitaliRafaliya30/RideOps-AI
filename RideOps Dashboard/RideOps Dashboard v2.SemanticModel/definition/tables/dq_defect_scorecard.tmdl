@@ -1,0 +1,44 @@
+table dq_defect_scorecard
+	lineageTag: 919f7e93-2ee6-48e4-b6d2-6645284c8043
+
+	column defect_id
+		dataType: int64
+		lineageTag: 0d653cf9-6bab-4bb7-a777-f035da89835c
+		sourceColumn: defect_id
+
+	column defect_name
+		dataType: string
+		lineageTag: 71618c01-c9bb-4434-a3c5-5e080a724cd1
+		sourceColumn: defect_name
+
+	column layer
+		dataType: string
+		lineageTag: d6f00234-6e3c-4ffb-8221-48fa871dde9c
+		sourceColumn: layer
+
+	column count
+		dataType: int64
+		lineageTag: d93962fe-ef4d-44fe-8fe4-337999a317b5
+		sourceColumn: count
+
+	column notes
+		dataType: string
+		lineageTag: c8749199-99bd-49a6-a517-bc5cd4d38f07
+		sourceColumn: notes
+
+	column _measured_at
+		dataType: dateTime
+		lineageTag: aee9ff93-e92f-46f8-b46e-30af4e022e5f
+		sourceColumn: _measured_at
+
+	partition dq_defect_scorecard = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    silver_Schema = rideops_ai_Database{[Name="silver",Kind="Schema"]}[Data],
+				    dq_defect_scorecard_View = silver_Schema{[Name="dq_defect_scorecard",Kind="View"]}[Data]
+				in
+				    dq_defect_scorecard_View
+

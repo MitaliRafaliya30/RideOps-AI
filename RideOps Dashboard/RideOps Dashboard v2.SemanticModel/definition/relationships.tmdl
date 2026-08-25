@@ -1,0 +1,128 @@
+relationship fact_ride_date
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.date_key
+	toColumn: dim_date.date_key
+
+relationship fact_ride_passenger
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.passenger_key
+	toColumn: dim_passenger.passenger_key
+
+relationship fact_ride_driver
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.driver_key
+	toColumn: dim_driver.driver_key
+
+relationship fact_ride_vehicle
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.vehicle_key
+	toColumn: dim_vehicle.vehicle_key
+
+relationship fact_ride_pickupzone
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.pickup_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship fact_ride_dropoffzone
+	isActive: false
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.dropoff_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship fact_ride_paymentmethod
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride.payment_method_key
+	toColumn: dim_payment_method.payment_method_key
+
+relationship fact_rideevent_date
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.date_key
+	toColumn: dim_date.date_key
+
+relationship fact_rideevent_ridestatus
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.ride_status_key
+	toColumn: dim_ride_status.ride_status_key
+
+relationship fact_rideevent_passenger
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.passenger_key
+	toColumn: dim_passenger.passenger_key
+
+relationship fact_rideevent_driver
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.driver_key
+	toColumn: dim_driver.driver_key
+
+relationship fact_rideevent_vehicle
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.vehicle_key
+	toColumn: dim_vehicle.vehicle_key
+
+relationship fact_rideevent_pickupzone
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.pickup_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship fact_rideevent_dropoffzone
+	isActive: false
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.dropoff_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship fact_rideevent_paymentmethod
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.payment_method_key
+	toColumn: dim_payment_method.payment_method_key
+
+relationship fact_rideevent_cancelreason
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_event.cancellation_reason_key
+	toColumn: dim_cancellation_reason.cancellation_reason_key
+
+relationship fact_fhvhv_date
+	relyOnReferentialIntegrity
+	fromColumn: fact_fhvhv_trip.date_key
+	toColumn: dim_date.date_key
+
+relationship fact_fhvhv_pickupzone
+	relyOnReferentialIntegrity
+	fromColumn: fact_fhvhv_trip.pickup_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship fact_fhvhv_dropoffzone
+	isActive: false
+	relyOnReferentialIntegrity
+	fromColumn: fact_fhvhv_trip.dropoff_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship agg_zonehourly_date
+	relyOnReferentialIntegrity
+	fromColumn: agg_zone_hourly.date_key
+	toColumn: dim_date.date_key
+
+relationship agg_zonehourly_zone
+	relyOnReferentialIntegrity
+	fromColumn: agg_zone_hourly.zone_key
+	toColumn: dim_zone.zone_key
+
+relationship agg_revenuedaily_date
+	relyOnReferentialIntegrity
+	fromColumn: agg_revenue_daily.date_key
+	toColumn: dim_date.date_key
+
+relationship agg_revenuedaily_zone
+	relyOnReferentialIntegrity
+	fromColumn: agg_revenue_daily.zone_key
+	toColumn: dim_zone.zone_key
+
+relationship agg_driverdaily_date
+	relyOnReferentialIntegrity
+	fromColumn: agg_driver_daily.date_key
+	toColumn: dim_date.date_key
+
+relationship agg_driverdaily_driver
+	relyOnReferentialIntegrity
+	fromColumn: agg_driver_daily.driver_key
+	toColumn: dim_driver.driver_key
+

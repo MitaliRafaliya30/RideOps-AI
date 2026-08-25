@@ -1,0 +1,112 @@
+table _Measures
+	lineageTag: a370c588-00c0-476c-ac45-ed828398c5e5
+
+	measure 'Total Rides' = CALCULATE(COUNT(fact_ride[ride_id]))
+		lineageTag: 8fce27e3-0eef-4eb3-baaa-669d5ca78c78
+
+	measure 'Completed Rides' = CALCULATE([Total Rides], fact_ride[final_status] = "completed")
+		lineageTag: fbfba02e-c97e-40c9-b3e5-e5a9fd2981e6
+
+	measure 'Cancelled Rides' = CALCULATE([Total Rides], fact_ride[final_status] = "cancelled")
+		lineageTag: 9cdf6e39-8843-4935-a90a-4d09dcb096f2
+
+	measure 'Completion Rate' = DIVIDE([Completed Rides], [Total Rides])
+		formatString: 0.00%
+		lineageTag: 55c38ca4-9adc-4988-9950-32d49f58a5fc
+
+	measure 'Completion Rate (Settled)' = DIVIDE([Completed Rides], [Completed Rides] + [Cancelled Rides])
+		formatString: 0.00%
+		lineageTag: 70ea652d-14e3-4d99-900d-274870bfdf83
+
+	measure 'Cancellation Rate' = DIVIDE([Cancelled Rides], [Total Rides])
+		formatString: 0.00%
+		lineageTag: 16c27050-a3cc-4dc2-9554-9f0f804363c7
+
+	measure 'Avg Wait Time (min)' = AVERAGE(fact_ride[wait_time_sec]) / 60
+		formatString: 0.00
+		lineageTag: 1e1dbbb0-abcd-4fe8-bf39-6e9ce58d3526
+
+	measure 'Total Revenue' = CALCULATE(SUM(fact_ride[total_fare]), fact_ride[final_status] = "completed")
+		formatString: $#,##0.00
+		lineageTag: 6a4c74cc-08a0-4840-a03e-b6b0ea86387d
+
+	measure 'Avg Fare' = DIVIDE([Total Revenue], [Completed Rides])
+		formatString: $#,##0.00
+		lineageTag: 106c5e24-be93-462d-821c-32a885bd6bf5
+
+	measure 'Total Driver Pay' = CALCULATE(SUM(fact_ride[driver_pay]), fact_ride[final_status] = "completed")
+		formatString: $#,##0.00
+		lineageTag: 96f9a4eb-7add-41bc-9b8a-b9310512134a
+
+	measure 'Trips (by Source)' = SUM(agg_zone_hourly[trip_count])
+		lineageTag: d706f8e5-7e0d-4373-aaa6-cc69b35d9000
+
+	measure 'Revenue (by Source)' = SUM(agg_revenue_daily[total_revenue])
+		formatString: $#,##0.00
+		lineageTag: 25e62b47-9f88-446d-b27b-1a0d2bb4e5d7
+
+	measure 'Driver Total Earnings' = SUM(agg_driver_daily[total_earnings])
+		formatString: $#,##0.00
+		lineageTag: 07ec24f4-2115-4e50-91d1-d943077dcb72
+
+	measure 'Driver Completion Rate' = DIVIDE(SUM(agg_driver_daily[completed_rides]), SUM(agg_driver_daily[total_rides]))
+		formatString: 0.00%
+		lineageTag: e0bdcb20-0f31-49ee-be4f-a18f1af61829
+
+	measure 'Total Cancellations' = CALCULATE(COUNT(fact_ride[ride_id]), fact_ride[final_status] = "cancelled")
+		formatString: #,##0
+		lineageTag: 38fb8f51-d44a-4632-a81c-28ac94aa93e5
+
+	measure 'Most Common Cancellation Stage' = CALCULATE(MAXX(TOPN(1, VALUES(fact_ride[cancellation_stage]), CALCULATE(COUNT(fact_ride[ride_id])), DESC), fact_ride[cancellation_stage]), fact_ride[final_status] = "cancelled")
+		lineageTag: 414b9546-532b-4fd8-8647-bff10c97d598
+
+	measure 'Total Active Drivers' = DISTINCTCOUNT(agg_driver_daily[driver_key])
+		formatString: #,##0
+		lineageTag: 754f7a7c-737f-4225-b72d-aab3cd13e6d4
+
+	measure 'Avg Completion Rate (Driver)' = AVERAGE(agg_driver_daily[completion_rate])
+		formatString: 0.00%
+		lineageTag: 41df5c47-d8f6-4262-a3a4-7a2014f809c6
+
+	measure 'Avg Earnings per Driver' = DIVIDE(SUM(agg_driver_daily[total_earnings]), DISTINCTCOUNT(agg_driver_daily[driver_key]))
+		formatString: $#,##0.00
+		lineageTag: 1fe93b75-1b79-4d20-a55f-fc717660be92
+
+	measure 'Operational Trips' = CALCULATE(SUM(agg_zone_hourly[trip_count]), agg_zone_hourly[source] = "operational")
+		formatString: #,##0
+		lineageTag: 91f40ae4-ba3a-4f62-997b-6508c41bbc13
+
+	measure 'Historical Trips' = CALCULATE(SUM(agg_zone_hourly[trip_count]), agg_zone_hourly[source] = "fhvhv")
+		formatString: #,##0
+		lineageTag: c7254456-d124-4180-a34b-4b1f8cafa9fc
+
+	measure 'Operational Revenue' = CALCULATE(SUM(agg_revenue_daily[total_revenue]), agg_revenue_daily[source] = "operational")
+		formatString: $#,##0.00
+		lineageTag: e3ac2703-ba81-484c-88ca-034a2f4d167b
+
+	measure 'Historical Revenue' = CALCULATE(SUM(agg_revenue_daily[total_revenue]), agg_revenue_daily[source] = "fhvhv")
+		formatString: $#,##0.00
+		lineageTag: c7a0a724-2b18-4b4d-ba5b-0838ef16bedc
+
+	measure 'Total Defects Measured' = CALCULATE(COUNT(dq_defect_scorecard[defect_id]))
+		formatString: #,##0
+		lineageTag: 6f34575b-2764-464c-b5c9-c1f6ebc6fc39
+
+	measure 'Total Quarantined Records' = COALESCE(CALCULATE(COUNT(dq_all_quarantine[source_table])), 0)
+		formatString: #,##0
+		lineageTag: 5bc8d93f-416c-4425-9f58-4e70289f7fcf
+
+	measure 'Arrived-Stage Cancellations' = CALCULATE(COUNT(fact_ride[ride_id]), fact_ride[cancellation_stage] = "arrived")
+		formatString: #,##0
+		lineageTag: 23203878-4fe5-4096-94f4-30d8fe92da14
+
+	column Value
+		isHidden
+		lineageTag: 6203282b-9b96-4ac3-b2f1-9c8c4b29e9f2
+		isNameInferred
+		sourceColumn: [Value]
+
+	partition _Measures = calculated
+		mode: import
+		source = ROW("Value", BLANK())
+

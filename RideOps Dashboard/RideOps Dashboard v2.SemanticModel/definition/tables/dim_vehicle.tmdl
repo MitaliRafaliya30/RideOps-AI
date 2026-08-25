@@ -1,0 +1,89 @@
+table dim_vehicle
+	lineageTag: 1dc33998-014a-448d-85c3-8c12f6e96975
+
+	column vehicle_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: cf6fcabe-90c4-453d-9eda-726892629637
+		summarizeBy: sum
+		sourceColumn: vehicle_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column vehicle_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 82e66228-a36d-482a-aef7-2aab7479c8b3
+		summarizeBy: sum
+		sourceColumn: vehicle_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column vehicle_type_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: b02ed1d7-96a8-4d01-8dab-cc01da129492
+		summarizeBy: none
+		sourceColumn: vehicle_type_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column capacity
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 540782c4-e131-49e6-a72b-0403923a3baa
+		summarizeBy: sum
+		sourceColumn: capacity
+
+		annotation SummarizationSetBy = Automatic
+
+	column base_fare_multiplier
+		dataType: double
+		sourceProviderType: decimal(38, 18)
+		lineageTag: 44827351-60f9-4846-a434-77819038f698
+		summarizeBy: sum
+		sourceColumn: base_fare_multiplier
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column manufacture_year
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: a3e1d502-ba9d-4549-a413-f200675cb692
+		summarizeBy: sum
+		sourceColumn: manufacture_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column last_service_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: fad08fac-32f8-4b33-82c8-40ccc61b8509
+		summarizeBy: none
+		sourceColumn: last_service_date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition dim_vehicle = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_vehicle_View = gold_Schema{[Name="dim_vehicle",Kind="View"]}[Data]
+				in
+				    dim_vehicle_View
+
+	annotation PBI_ResultType = Table
+

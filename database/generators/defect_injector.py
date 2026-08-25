@@ -264,12 +264,11 @@ class DefectInjector:
         
         # Fields that can be null without breaking everything
         nullable_fields = {
-            "requested": ["payment_method_id"],
             "assigned": ["driver_id", "vehicle_id"],
-            "accepted": ["driver_id"],
-            "arrived": ["driver_id"],
-            "started": ["driver_id"],
-            "completed": ["trip_miles"],
+            "accepted": ["driver_id", "vehicle_id"],
+            "arrived": ["driver_id", "vehicle_id"],
+            "started": ["driver_id", "vehicle_id"],
+            "completed": ["driver_id", "vehicle_id", "trip_miles", "base_passenger_fare"],
             "cancelled": ["cancellation_reason_id"],
         }
         
@@ -331,9 +330,9 @@ class DefectInjector:
             
             # Negative value or absurdly high
             if self.rng.random() < 0.5:
-                event[field] = str(Decimal("-10.50"))  # Negative
+                event[field] = float(Decimal("-10.50"))  # Negative
             else:
-                event[field] = str(Decimal("99999.99"))  # Absurdly high
+                event[field] = float(Decimal("99999.99"))  # Absurdly high
         
         return events
     

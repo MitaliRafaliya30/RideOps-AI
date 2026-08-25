@@ -1,0 +1,106 @@
+table dim_passenger
+	lineageTag: 66bdd608-51c3-4749-9781-f61a18b6d696
+
+	column passenger_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: b082afd2-d91f-4479-8709-023aa4b17b4c
+		summarizeBy: sum
+		sourceColumn: passenger_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column passenger_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 4d9ea8da-899b-4189-b7f1-273f54982a02
+		summarizeBy: sum
+		sourceColumn: passenger_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column signup_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 5624de7e-a1ab-4faa-83b5-2d30e148a4b3
+		summarizeBy: none
+		sourceColumn: signup_date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column avg_driver_rating_given
+		dataType: double
+		sourceProviderType: decimal(3, 2)
+		lineageTag: d5c58882-c5cd-48a1-9d44-e245c51d39ad
+		summarizeBy: sum
+		sourceColumn: avg_driver_rating_given
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column membership_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 9f3f6e1f-fc02-4fd6-b191-008d75f98a1b
+		summarizeBy: none
+		sourceColumn: membership_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column preferred_payment_method_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 18285b78-fce4-4e21-97d3-3ad6baf3609a
+		summarizeBy: none
+		sourceColumn: preferred_payment_method_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column home_zone_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 5c603345-f3dc-4d54-8647-978d4df25fa9
+		summarizeBy: sum
+		sourceColumn: home_zone_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column home_borough
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 635f0ba4-1c32-4226-9ce7-0e37afbb8436
+		summarizeBy: none
+		sourceColumn: home_borough
+
+		annotation SummarizationSetBy = Automatic
+
+	column home_zone_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: ad693401-7cde-4426-8e9c-10b80e9aef01
+		summarizeBy: none
+		sourceColumn: home_zone_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_passenger = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_passenger_View = gold_Schema{[Name="dim_passenger",Kind="View"]}[Data]
+				in
+				    dim_passenger_View
+
+	annotation PBI_ResultType = Table
+

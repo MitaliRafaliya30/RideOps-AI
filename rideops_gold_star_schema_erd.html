@@ -1,0 +1,203 @@
+<style>
+#erd { padding: 1rem 0; }
+#erd svg.erDiagram .divider path { stroke-opacity: 0.5; }
+#erd svg.erDiagram .row-rect-odd path,
+#erd svg.erDiagram .row-rect-odd rect,
+#erd svg.erDiagram .row-rect-even path,
+#erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+</style>
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"anthropic-sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"anthropic-sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  DIM_ZONE ||--o{ FACT_RIDE : "pickup+dropoff zone"
+  DIM_ZONE ||--o{ FACT_FHVHV_TRIP : "pickup+dropoff zone"
+  DIM_ZONE ||--o{ FACT_RIDE_EVENT : "pickup+dropoff zone"
+  DIM_ZONE ||--o{ DIM_PASSENGER : "home_zone_id"
+  DIM_DATE ||--o{ FACT_RIDE : "date_key"
+  DIM_DATE ||--o{ FACT_FHVHV_TRIP : "date_key"
+  DIM_DATE ||--o{ FACT_RIDE_EVENT : "date_key"
+  DIM_PASSENGER ||--o{ FACT_RIDE : "passenger_id"
+  DIM_PASSENGER ||--o{ FACT_RIDE_EVENT : "passenger_id"
+  DIM_DRIVER ||--o{ FACT_RIDE : "driver_id"
+  DIM_DRIVER ||--o{ FACT_RIDE_EVENT : "driver_id"
+  DIM_VEHICLE ||--o{ FACT_RIDE : "vehicle_id"
+  DIM_VEHICLE ||--o{ FACT_RIDE_EVENT : "vehicle_id"
+  DIM_PAYMENT_METHOD ||--o{ FACT_RIDE : "payment_method_id"
+  DIM_RIDE_STATUS ||--o{ FACT_RIDE : "ride_status_id"
+  DIM_CANCELLATION_REASON ||--o{ FACT_RIDE : "cancellation_reason_id"
+  DIM_EVENT_TYPE ||--o{ FACT_RIDE_EVENT : "event_type_id"
+  DIM_HVFHS_LICENSE ||--o{ FACT_FHVHV_TRIP : "hvfhs_license_num"
+  FACT_RIDE ||--o{ FACT_RIDE_EVENT : "ride_id"
+  DIM_VEHICLE_TYPE ||--o{ DIM_VEHICLE : "vehicle_type_id (flattened)"
+  DIM_MEMBERSHIP_TIER ||--o{ DIM_PASSENGER : "membership_tier_id (flattened)"
+
+  FACT_RIDE {
+    string ride_id PK
+    int passenger_id FK
+    int driver_id FK
+    int vehicle_id FK
+    int pickup_zone_id FK
+    int dropoff_zone_id FK
+    int payment_method_id FK
+    int ride_status_id FK
+    int cancellation_reason_id FK
+    int date_key FK
+    int pickup_hour
+    ts requested_at
+    ts completed_at
+    decimal base_passenger_fare
+    decimal tips
+    decimal driver_pay
+    decimal total_fare
+    double trip_miles
+    int wait_time
+    int ride_duration
+    string cancellation_stage
+  }
+  FACT_RIDE_EVENT {
+    string event_id PK
+    string ride_id FK
+    int event_type_id FK
+    int passenger_id FK
+    int driver_id FK
+    int vehicle_id FK
+    int pickup_zone_id FK
+    int dropoff_zone_id FK
+    int date_key FK
+    ts event_timestamp
+  }
+  FACT_FHVHV_TRIP {
+    string trip_id PK
+    string hvfhs_license_num FK
+    int pickup_zone_id FK
+    int dropoff_zone_id FK
+    int date_key FK
+    int pickup_hour
+    double trip_miles
+    int trip_time
+    decimal base_passenger_fare
+    decimal tolls
+    decimal tips
+    decimal driver_pay
+    string shared_request_flag
+    string wav_request_flag
+  }
+  DIM_ZONE {
+    int zone_id PK
+    string borough
+    string zone_name
+    string service_zone
+  }
+  DIM_DATE {
+    int date_key PK
+    date full_date
+    int year
+    int month
+    int day
+    string day_name
+    boolean is_weekend
+  }
+  DIM_PASSENGER {
+    int passenger_id PK
+    string passenger_code
+    date signup_date
+    int membership_tier_id FK
+    int preferred_payment_method_id
+    int home_zone_id FK
+    double avg_driver_rating_given
+    boolean is_active
+    string membership_tier_name
+    double reward_points_multiplier
+  }
+  DIM_DRIVER {
+    int driver_id PK
+    string driver_code
+    string driver_name
+    double rating
+    int exp_years
+    date join_date
+    string status
+  }
+  DIM_VEHICLE {
+    int vehicle_id PK
+    string vehicle_code
+    int driver_id FK
+    int vehicle_type_id FK
+    int manufacture_year
+    string plat_number
+    boolean is_active
+    date last_service_date
+    string vehicle_type_name
+    int capacity
+    double base_fare_multiplier
+  }
+  DIM_VEHICLE_TYPE {
+    int vehicle_type_id PK
+    string vehicle_type_name
+    int capacity
+    double base_fare_multiplier
+  }
+  DIM_MEMBERSHIP_TIER {
+    int membership_tier_id PK
+    string membership_tier_name
+    double reward_points_multiplier
+  }
+  DIM_PAYMENT_METHOD {
+    int payment_method_id PK
+    string payment_method_name
+  }
+  DIM_RIDE_STATUS {
+    int ride_status_id PK
+    string status_name
+  }
+  DIM_CANCELLATION_REASON {
+    int cancellation_reason_id PK
+    string reason_category
+  }
+  DIM_EVENT_TYPE {
+    int event_type_id PK
+    string event_type_name
+  }
+  DIM_HVFHS_LICENSE {
+    string hvfhs_license_num PK
+    string license_name
+  }`);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>

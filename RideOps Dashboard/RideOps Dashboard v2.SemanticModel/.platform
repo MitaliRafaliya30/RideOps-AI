@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "RideOps Dashboard v2"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "5558df76-37be-4154-a77f-1f16b77d373d"
+  }
+}

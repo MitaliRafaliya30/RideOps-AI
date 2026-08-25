@@ -204,7 +204,7 @@ class RideEventGenerator:
                 
                 # Cancel (no-show)
                 cancel_timestamp = arrived_timestamp + timedelta(seconds=120)
-                cancellation_reason_id = CANCELLATION_REASONS.get(4, 4)  # "Passenger No Show"
+                cancellation_reason_id = 4  # "Passenger No Show"
                 
                 cancelled_event = self._create_event(
                     event_type="cancelled",
@@ -356,15 +356,15 @@ class RideEventGenerator:
         # Add fare components if completed
         if fare_breakdown:
             event.update({
-                "base_passenger_fare": str(fare_breakdown["base_passenger_fare"]),
-                "tolls": str(fare_breakdown["tolls"]),
-                "bcf": str(fare_breakdown["bcf"]),
-                "sales_tax": str(fare_breakdown["sales_tax"]),
-                "congestion_surcharge": str(fare_breakdown["congestion_surcharge"]),
-                "airport_fee": str(fare_breakdown["airport_fee"]),
-                "cbd_congestion_fee": str(fare_breakdown["cbd_congestion_fee"]),
-                "tips": str(fare_breakdown["tips"]),
-                "driver_pay": str(fare_breakdown["driver_pay"]),
+                "base_passenger_fare": float(fare_breakdown["base_passenger_fare"]),
+                "tolls": float(fare_breakdown["tolls"]),
+                "bcf": float(fare_breakdown["bcf"]),
+                "sales_tax": float(fare_breakdown["sales_tax"]),
+                "congestion_surcharge": float(fare_breakdown["congestion_surcharge"]),
+                "airport_fee": float(fare_breakdown["airport_fee"]),
+                "cbd_congestion_fee": float(fare_breakdown["cbd_congestion_fee"]),
+                "tips": float(fare_breakdown["tips"]),
+                "driver_pay": float(fare_breakdown["driver_pay"]),
             })
         else:
             # Null fares for non-completed events

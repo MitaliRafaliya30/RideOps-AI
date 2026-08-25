@@ -1,0 +1,55 @@
+table dim_zone
+	lineageTag: 7b8a200e-9f92-41bd-b1a9-4b94ef75100b
+
+	column zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 874b745e-42cd-4d9c-9b70-50c1c3f5cc2c
+		summarizeBy: sum
+		sourceColumn: zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column zone_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 7e8e8dbd-a64d-4a13-a87d-b2bfcc09a865
+		summarizeBy: sum
+		sourceColumn: zone_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column borough
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: d8f6c1d1-6b6c-49aa-b05a-db282b6a99dc
+		summarizeBy: none
+		sourceColumn: borough
+
+		annotation SummarizationSetBy = Automatic
+
+	column zone_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: e8ae52f4-22f9-44ec-845e-a6f8015dae72
+		summarizeBy: none
+		sourceColumn: zone_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_zone = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_zone_View = gold_Schema{[Name="dim_zone",Kind="View"]}[Data]
+				in
+				    dim_zone_View
+
+	annotation PBI_ResultType = Table
+

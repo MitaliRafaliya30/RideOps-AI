@@ -1,0 +1,167 @@
+table agg_revenue_daily
+	lineageTag: 3872f08f-02ff-4ae8-8249-26718b9ab9d6
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: d906d2a1-dbbf-47b1-a230-f6eaa0fbe079
+		summarizeBy: sum
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 7710943f-e5dd-4a87-8af7-246b0a749bd0
+		summarizeBy: sum
+		sourceColumn: zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column trip_count
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 48845e3b-24a8-4131-81ce-4d03210b61a7
+		summarizeBy: sum
+		sourceColumn: trip_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column base_fare_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6e4eee5a-a947-4df0-bf0f-8d3abacc3a14
+		summarizeBy: sum
+		sourceColumn: base_fare_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tolls_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 0f2ea96e-e720-4d5f-a306-a98ee7956b63
+		summarizeBy: sum
+		sourceColumn: tolls_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column bcf_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 49c1e729-5c65-42c8-89e5-4e78cabd9839
+		summarizeBy: sum
+		sourceColumn: bcf_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column sales_tax_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 3a28c1f4-0c8e-46ed-b1a7-fee7d1947b1e
+		summarizeBy: sum
+		sourceColumn: sales_tax_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column congestion_surcharge_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: a63b6a09-d8d2-4d06-95e8-a5f648733c4c
+		summarizeBy: sum
+		sourceColumn: congestion_surcharge_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column airport_fee_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6c823281-50db-4769-9f18-e40494ee2937
+		summarizeBy: sum
+		sourceColumn: airport_fee_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cbd_congestion_fee_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 37ab287d-49e2-4a77-b39e-3f7ae5bae296
+		summarizeBy: sum
+		sourceColumn: cbd_congestion_fee_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tips_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: c50e75b6-f680-43b2-a3ac-933093304e0d
+		summarizeBy: sum
+		sourceColumn: tips_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column driver_pay_total
+		dataType: double
+		sourceProviderType: double
+		lineageTag: d1963cc7-7be5-454f-9710-f8a99056fb3b
+		summarizeBy: sum
+		sourceColumn: driver_pay_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column total_revenue
+		dataType: double
+		sourceProviderType: double
+		lineageTag: f8e54897-8798-4766-86e8-4f7f503ae1a4
+		summarizeBy: sum
+		sourceColumn: total_revenue
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 073aea3d-5927-48ae-9248-5beb507d17d5
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	partition agg_revenue_daily = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    agg_revenue_daily_View = gold_Schema{[Name="agg_revenue_daily",Kind="View"]}[Data]
+				in
+				    agg_revenue_daily_View
+
+	annotation PBI_ResultType = Table
+

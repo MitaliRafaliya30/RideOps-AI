@@ -1,0 +1,46 @@
+table dim_cancellation_reason
+	lineageTag: 5a8ce91b-2067-4643-9720-f3f8ee8d559f
+
+	column cancellation_reason_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 35e2b24d-fac9-486f-ba95-d92ce68158bf
+		summarizeBy: sum
+		sourceColumn: cancellation_reason_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column cancellation_reason_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 063cff67-5b4b-4bfb-9d85-aeb9cc6f377a
+		summarizeBy: sum
+		sourceColumn: cancellation_reason_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column reason_category
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 9ab5dd06-85da-42a6-90a9-ff95ce6532ed
+		summarizeBy: none
+		sourceColumn: reason_category
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_cancellation_reason = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_cancellation_reason_View = gold_Schema{[Name="dim_cancellation_reason",Kind="View"]}[Data]
+				in
+				    dim_cancellation_reason_View
+
+	annotation PBI_ResultType = Table
+

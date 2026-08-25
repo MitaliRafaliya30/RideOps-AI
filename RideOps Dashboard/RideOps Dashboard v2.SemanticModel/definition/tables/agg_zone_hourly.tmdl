@@ -1,0 +1,100 @@
+table agg_zone_hourly
+	lineageTag: d7325de5-77f3-49e0-ad58-fe19e65398ff
+
+	column zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 1ffb3f6a-8c90-4bd0-bacb-c9bfce147ca3
+		summarizeBy: sum
+		sourceColumn: zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 5bc56901-2847-4aa7-9907-c508d47983a5
+		summarizeBy: sum
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column hour_of_day
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 02131310-f01e-4e37-bbaf-7e1c7e960b45
+		summarizeBy: sum
+		sourceColumn: hour_of_day
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 40fe4352-efd7-4f9e-9f5d-5ac0a8d0c74f
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column trip_count
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: f544f0cc-b43b-4224-a711-dd7c684c057d
+		summarizeBy: sum
+		sourceColumn: trip_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_wait_time_sec
+		dataType: double
+		sourceProviderType: double
+		lineageTag: d238f4e3-f79a-4908-a55e-502b2f7d4238
+		summarizeBy: sum
+		sourceColumn: avg_wait_time_sec
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cancellation_rate
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 40f31350-2d80-48e2-9f0f-6d08746f4a23
+		summarizeBy: sum
+		sourceColumn: cancellation_rate
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column total_revenue
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 7e6180bb-4add-471d-9889-8a7ec7752278
+		summarizeBy: sum
+		sourceColumn: total_revenue
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition agg_zone_hourly = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    agg_zone_hourly_View = gold_Schema{[Name="agg_zone_hourly",Kind="View"]}[Data]
+				in
+				    agg_zone_hourly_View
+
+	annotation PBI_ResultType = Table
+

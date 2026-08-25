@@ -1,0 +1,34 @@
+table dq_all_quarantine
+	lineageTag: 8ec4ee3b-d02d-4f67-a43f-fbda83633913
+
+	column source_table
+		dataType: string
+		lineageTag: 3d355ebf-db70-4cf8-a6fb-f3e79097d217
+		sourceColumn: source_table
+
+	column record_json
+		dataType: string
+		lineageTag: 75b69c13-37ec-409e-ae4f-51ae448b2fb2
+		sourceColumn: record_json
+
+	column failed_rule
+		dataType: string
+		lineageTag: fcf4553a-50a7-4f8e-9d75-9530af2036e7
+		sourceColumn: failed_rule
+
+	column quarantined_at
+		dataType: dateTime
+		lineageTag: c0eddc84-bcc0-486f-96c6-e25e4252c890
+		sourceColumn: quarantined_at
+
+	partition dq_all_quarantine = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    silver_Schema = rideops_ai_Database{[Name="silver",Kind="Schema"]}[Data],
+				    dq_all_quarantine_View = silver_Schema{[Name="dq_all_quarantine",Kind="View"]}[Data]
+				in
+				    dq_all_quarantine_View
+

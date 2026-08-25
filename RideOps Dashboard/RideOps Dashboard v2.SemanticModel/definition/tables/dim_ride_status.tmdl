@@ -1,0 +1,46 @@
+table dim_ride_status
+	lineageTag: 5d59dcbd-e771-4742-a064-37552f1a7191
+
+	column ride_status_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 43b5c6be-736a-4cc2-a245-f340730e9945
+		summarizeBy: sum
+		sourceColumn: ride_status_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column ride_status_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: d09baaee-9fbe-4715-bf5f-b53407c01941
+		summarizeBy: sum
+		sourceColumn: ride_status_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ride_status_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 83b42fd9-5f9f-4dbf-8049-bcf0acdfc467
+		summarizeBy: none
+		sourceColumn: ride_status_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_ride_status = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_ride_status_View = gold_Schema{[Name="dim_ride_status",Kind="View"]}[Data]
+				in
+				    dim_ride_status_View
+
+	annotation PBI_ResultType = Table
+

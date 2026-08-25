@@ -1,0 +1,112 @@
+table agg_driver_daily
+	lineageTag: a58dd512-ccce-4175-94e8-0b7b7984b8f8
+
+	column driver_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 86217971-7681-4a67-8090-8ac20fb2627f
+		summarizeBy: sum
+		sourceColumn: driver_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 9e4306a4-ba54-477c-bf7f-d3826a0f928e
+		summarizeBy: sum
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column completed_rides
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 9fbb84f0-e9b7-43a7-84cd-425ecd020b32
+		summarizeBy: sum
+		sourceColumn: completed_rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column cancelled_rides
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 9c13b60b-c2d6-4b40-8ce3-0eb088e3f984
+		summarizeBy: sum
+		sourceColumn: cancelled_rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_rides
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: e8bda70f-6ed7-4ff2-ae17-e51134d4e4bc
+		summarizeBy: sum
+		sourceColumn: total_rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_earnings
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 025f67d0-c194-4629-ad88-8873d083f5aa
+		summarizeBy: sum
+		sourceColumn: total_earnings
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column avg_ride_duration_sec
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 80e0d64b-c25d-4c06-8fcc-bee14db5bbaf
+		summarizeBy: sum
+		sourceColumn: avg_ride_duration_sec
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column avg_fare_per_ride
+		dataType: double
+		sourceProviderType: double
+		lineageTag: d46440e9-985c-42bb-a593-154870375a4a
+		summarizeBy: sum
+		sourceColumn: avg_fare_per_ride
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column completion_rate
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6aa916ac-63c0-41e2-94ea-106f84603755
+		summarizeBy: sum
+		sourceColumn: completion_rate
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition agg_driver_daily = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    agg_driver_daily_View = gold_Schema{[Name="agg_driver_daily",Kind="View"]}[Data]
+				in
+				    agg_driver_daily_View
+
+	annotation PBI_ResultType = Table
+

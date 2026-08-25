@@ -1,0 +1,211 @@
+################################################################################
+# RideOps AI - Event Simulator Configuration
+# Defines all runtime behavior for generator, defects, emission, and logging
+################################################################################
+
+simulator:
+  # Core generator settings
+  duration_seconds: 3600              # How long to run (default 1 hour)
+  rate_rides_per_second: 10           # Target ride generation rate
+  seed: null                          # RNG seed for reproducibility (null = random)
+
+database:
+  # PostgreSQL connection for entity pool
+  host: ${POSTGRES_HOST}
+  port: ${POSTGRES_PORT}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  database: ${POSTGRES_DB}
+  
+  connection_pool_size: 10
+  connection_timeout_seconds: 30
+
+event_hubs:
+  # Azure Event Hubs connection (for future use)
+  connection_string: ${EVENT_HUBS_CONNECTION_STRING}
+  hub_name: ${EVENT_HUBS_HUB_NAME}
+  partition_count: 8
+  partition_key: ride_id
+  
+  emission:
+    batch_size: 1                     # v1: 1 event per send
+    synchronous: true                 # Block on send
+    retry_max_attempts: 3
+    retry_backoff_multiplier: 2       # exponential backoff: 1s, 2s, 4s
+    timeout_seconds: 30
+
+defects:
+  # Master enable/disable for all defects
+  enabled: true
+  
+  defect_1:
+    name: out_of_order
+    enabled: true
+    rate: 0.05                        # 5% of rides
+    severity: low                     # low / medium / high
+    shuffle_window_size: 5            # shuffle within N events
+  
+  defect_2:
+    name: late_arrival
+    enabled: true
+    rate: 0.03                        # 3% of rides
+    severity: low
+    holdback_delay_seconds:
+      min: 60
+      max: 180
+  
+  defect_3:
+    name: exact_duplicate
+    enabled: true
+    rate: 0.02                        # 2% of events
+  
+  defect_4:
+    name: near_duplicate
+    enabled: true
+    rate: 0.03                        # 3% of events
+    severity: low
+    timestamp_gap_seconds:
+      min: 0.1
+      max: 2.0
+  
+  defect_5:
+    name: null_required_field
+    enabled: true
+    rate: 0.02                        # 2% of events
+    severity: low
+  
+  defect_6:
+    name: invalid_event_type
+    enabled: true
+    rate: 0.01                        # 1% of events
+  
+  defect_7:
+    name: out_of_range
+    enabled: true
+    rate: 0.04                        # 4% of events
+    severity: low
+  
+  defect_8:
+    name: incomplete_ride
+    enabled: true
+    rate: 0.03                        # 3% of rides
+    severity: low
+    abandonment_stages:
+      - assigned
+      - accepted
+      - arrived
+
+generation:
+  # Clean generator tuning
+  completion_rate: 0.85               # % of rides that complete (vs cancel)
+  
+  timing:
+    request_to_assign_seconds:
+      min: 5
+      max: 30
+    assign_to_accept_seconds:
+      min: 5
+      max: 10
+    accept_to_arrive_seconds:
+      min: 20
+      max: 120
+    arrive_to_start_seconds:
+      min: 10
+      max: 30
+  
+  fare:
+    base_fare: 2.50
+    distance_multiplier: 2.50         # $ per mile
+    time_multiplier: 0.45             # $ per minute
+    tip_rate_min: 0.10                # 10% min
+    tip_rate_max: 0.25                # 25% max
+    driver_share_percent: 75          # % of fare to driver
+
+logging:
+  # Output and logging configuration
+  log_level: INFO                     # DEBUG / INFO / WARNING / ERROR
+  log_file: logs/simulator.log
+  log_format: json                    # json / text
+  
+  console_output: true                # Print to stdout
+  console_level: INFO                 # Subset of log_level for console
+  
+  metrics:
+    enabled: true
+    interval_seconds: 60              # Report metrics every N seconds
+    report_defects: true              # Include defect counts
+    report_throughput: true           # Events/sec, bytes/sec
+
+pacing:
+  # Throughput control
+  events_per_second_target: 60        # Derived: rides/sec * events/ride
+  burst_allowed: true                 # Allow burstiness or strict pacing
+  
+  warmup_seconds: 5                   # Ramp up before steady state
+  cooldown_seconds: 5                 # Ramp down before shutdown
+
+control:
+  # Runtime control behavior
+  graceful_shutdown_timeout_seconds: 30
+  fail_on_first_error: false
+  max_consecutive_errors: 100
+
+################################################################################
+# Scenario Presets
+################################################################################
+
+scenarios:
+  # Scenario 1: Clean (no defects)
+  clean:
+    description: "Perfect stream, no defects"
+    seed: 11111
+    duration_seconds: 1800
+    defects_enabled: false
+    rate_rides_per_second: 10
+  
+  # Scenario 2: Default (realistic defect rates)
+  default:
+    description: "v1 defect rates: realistic defects"
+    seed: 22222
+    duration_seconds: 3600
+    defects_enabled: true
+    rate_rides_per_second: 10
+  
+  # Scenario 3: High defect stress test
+  stress:
+    description: "High defect injection: 30% overall defect rate"
+    seed: 33333
+    duration_seconds: 1800
+    defects_enabled: true
+    rate_rides_per_second: 100
+    defect_overrides:
+      defect_1:
+        rate: 0.20
+        severity: high
+      defect_2:
+        rate: 0.15
+        severity: high
+      defect_3:
+        rate: 0.10
+      defect_4:
+        rate: 0.10
+        severity: high
+      defect_5:
+        rate: 0.10
+        severity: high
+      defect_6:
+        rate: 0.05
+      defect_7:
+        rate: 0.15
+        severity: high
+      defect_8:
+        rate: 0.10
+        severity: high
+  
+  # Scenario 4: Demo (short, seeded, reproducible)
+  demo:
+    description: "5-minute demo: seed 99999, 5 rides/sec"
+    seed: 99999
+    duration_seconds: 300
+    defects_enabled: true
+    rate_rides_per_second: 5

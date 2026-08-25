@@ -1,0 +1,46 @@
+table dim_payment_method
+	lineageTag: 24d6475c-ca22-4180-9c65-5b1a29553627
+
+	column payment_method_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 9404b140-8b06-4ff6-b636-de4bf6b85cd6
+		summarizeBy: sum
+		sourceColumn: payment_method_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column payment_method_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 81741b12-4967-4eb9-bd24-af5b5ff971c0
+		summarizeBy: sum
+		sourceColumn: payment_method_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column payment_method_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: a8c51b96-bad8-47ca-a0ee-4d8c1b7b0afb
+		summarizeBy: none
+		sourceColumn: payment_method_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_payment_method = m
+		mode: directQuery
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_payment_method_View = gold_Schema{[Name="dim_payment_method",Kind="View"]}[Data]
+				in
+				    dim_payment_method_View
+
+	annotation PBI_ResultType = Table
+

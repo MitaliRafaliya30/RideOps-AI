@@ -80,6 +80,110 @@ Nine PostgreSQL master and reference tables are extracted through a parameterize
 
 The pipeline runs through a **Self-Hosted Integration Runtime**.
 
+## 🏗️ The Medallion Architecture
+
+The RideOps data platform follows a **Bronze → Silver → Gold medallion architecture**, separating raw ingestion, data quality and conformance, and analytics-ready consumption.
+
+### 🥉 Bronze — Raw Ingestion
+
+> **Rule:** Land data as-is, validate structure only, quarantine what fails, and attach lineage. **No business logic.**
+
+| Tables | Source | Read Pattern |
+|---|---|---|
+| `ride_events_raw`, `ride_events_quarantine` | Azure Event Hubs | Structured Streaming (Kafka) |
+| `fhvhv_trips_raw` | ADLS Gen2 | Auto Loader with schema evolution |
+| `9 × *_raw` reference tables | ADLS Gen2 | Batch read generated from a control list |
+
+A single internal view parses each event once and branches records into **valid** and **quarantined** outputs.
+
+Validation is performed strictly at the **single-row level**:
+
+- Malformed JSON that cannot be parsed against the expected schema
+- Null always-required fields: `event_id`, `ride_id`, `event_type`, and `event_timestamp`
+- Null stage-required fields, such as `driver_id` on an `assigned` event
+- Invalid `event_type` values outside the seven legal lifecycle events
+- Out-of-range fare and distance values, including both **negative** and **absurdly high** values
+
+Every row carries ingestion and source lineage through `_ingested_at`, `_source`, Kafka metadata (`_kafka_topic`, `_partition`, `_offset`), or file metadata (`_source_file`, `_file_modified_at`).
+
+---
+
+### 🥈 Silver — Cleansed & Conformed
+
+> **Rule:** Deduplicate, standardize, track history, enforce referential integrity, and reconstruct business entities.**
+
+#### Master Data — SCD Type 2
+
+Master data:
+
+- `sv_passengers`
+- `sv_drivers`
+- `sv_vehicles`
+
+uses **SCD Type 2** through `create_auto_cdc_from_snapshot_flow`, chosen because PostgreSQL arrives as a **full snapshot rather than a change feed**.
+
+Referential integrity is validated **before** history tracking, ensuring that only resolvable records enter the SCD Type 2 pipeline.
+
+#### Streaming Event Deduplication
+
+Streaming events flow through a **45-minute watermark** and two separate deduplication passes:
+
+```python
+.withWatermark("event_timestamp", "45 minutes")
+.dropDuplicatesWithinWatermark(["event_id"])
+.dropDuplicatesWithinWatermark(["ride_id", "event_type"])
+```
+
+The two rules handle different failure modes:
+
+- **Exact duplicate events** with the same `event_id`
+- **Retry events with a new ID** but the same `ride_id` and `event_type`
+
+`dropDuplicatesWithinWatermark` is used instead of standard `dropDuplicates` to prevent unbounded state growth.
+
+#### Ride State Reconstruction
+
+Individual lifecycle events are reconstructed into **one row per `ride_id`** using Auto CDC with:
+
+```python
+ignore_null_updates=True
+```
+
+This preserves milestone values from earlier events when later events only contain newly updated fields.
+
+Each reconstructed ride includes:
+
+- Lifecycle milestone timestamps
+- `final_status`
+- `cancellation_stage`
+- Four duration measures
+- `is_stale` flag for rides remaining in-flight for more than two hours
+
+---
+
+### 🥇 Gold — Analytics Star Schema
+
+> **Rule:** Define grain, assign surrogate keys, and shape data for consumption. **Business logic ends here.**
+
+| Type | Tables |
+|---|---|
+| **Dimensions (8)** | `dim_date`, `dim_zone`, `dim_passenger`, `dim_driver`, `dim_vehicle`, `dim_payment_method`, `dim_ride_status`, `dim_cancellation_reason` |
+| **Facts (3)** | `fact_ride`, `fact_ride_event`, `fact_fhvhv_trip` |
+| **Analytics Marts (3)** | `agg_zone_hourly`, `agg_driver_daily`, `agg_revenue_daily` |
+
+#### Surrogate Key Strategy
+
+Surrogate keys are sized according to the characteristics of each table.
+
+Stable dimensions that can be fully rebuilt use:
+
+```python
+row_number()
+```
+
+`fact_fhvhv_trip` uses a **SHA-256 hash of a composite fingerprint** because the table continuously grows as new monthly data arrives. This prevents existing surrogate keys from changing during future rebuilds, which would happen if `row_number()` were recalculated.
+
+
 **Extracted tables:**
 
 `passengers` · `drivers` · `vehicles` · `vehicle_types` · `membership_tiers` · `payment_methods` · `ride_status` · `cancellation_reasons` · `zone_lookup`

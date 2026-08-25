@@ -18,8 +18,15 @@ Three heterogeneous sources feed a governed Databricks lakehouse, surfaced throu
 ![Data Quality](https://img.shields.io/badge/Data%20Quality-8%20Injected%20Defects-success)
 ![Reconciliation](https://img.shields.io/badge/Reconciliation-Row%20Level-success)
 
+## Architecture
 
-
+<p align="center">
+  <img 
+    src="docs/images/data-and-analytics-architecture.png" 
+    alt="RideOps AI — End-to-End Data & Analytics Architecture"
+    width="100%"
+  />
+</p>
 
 
 

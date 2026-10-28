@@ -7,7 +7,10 @@ requires-python = ">=3.11"
 dependencies = [
     "azure-eventhub==5.11.5",
     "faker>=40.36.0",
+    "geopandas>=1.0",
+    "osmnx>=2.0",
     "pandas>=3.0.5",
+    "polyline>=2.0",
     "psycopg2-binary>=2.9.12",
     "psycopg[binary]>=3.3.4",
     "pyspark==3.5.0",

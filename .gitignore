@@ -5,16 +5,38 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
 
 # Virtual environments
 .venv
 
-# Environment Variables
+# Environment variables and secrets (keep only .env.example files)
 .env
+**/.env
+secrets.env
+
+# Large source data (download separately, see README)
+data/fhvhv/
+*.parquet
+
+# Raw Databricks export kept locally as a backup; clean code lives in databricks/
+transformations/
+# Ad-hoc Databricks exploration notebooks (local only)
+databricks/explorations/
+
+# Power BI project: per-user settings and local model cache
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+
+# Logs and generated output
+logs/*
+!logs/.gitkeep
+output/*
+!output/.gitkeep
 
 # VS Code
 .vscode/
 
 # OS
 .DS_Store
-Thumbs.dbdata/fhvhv/fhvhv_tripdata_2026-05.parquet
+Thumbs.db

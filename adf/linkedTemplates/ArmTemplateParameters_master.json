@@ -1,0 +1,42 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "value": "adf-rideops-dev1"
+        },
+        "LS_SRC_LOCAL_FHVHV_password": {
+            "value": ""
+        },
+        "LS_ADLS_RIDEOPS_accountKey": {
+            "value": ""
+        },
+        "ls_postgres_rideops_ai_db_password": {
+            "value": ""
+        },
+        "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
+            "value": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\fhvhv"
+        },
+        "LS_SRC_LOCAL_FHVHV_properties_typeProperties_userId": {
+            "value": "meet\\win-11"
+        },
+        "LS_ADLS_RIDEOPS_properties_typeProperties_url": {
+            "value": "https://strideopsdev1.dfs.core.windows.net/"
+        },
+        "ls_postgres_rideops_ai_db_properties_typeProperties_server": {
+            "value": "localhost"
+        },
+        "ls_postgres_rideops_ai_db_properties_typeProperties_database": {
+            "value": "rideops_ai_db"
+        },
+        "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
+            "value": "adf_reader"
+        },
+        "containerUri": {
+            "value": ""
+        },
+        "containerSasToken": {
+            "value": ""
+        }
+    }
+}

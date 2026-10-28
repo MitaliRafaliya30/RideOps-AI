@@ -1,0 +1,9 @@
+python-dotenv
+langchain
+langchain-community
+langgraph
+databricks-sql-connector
+databricks-sqlalchemy
+sqlalchemy
+streamlit
+langchain-openai

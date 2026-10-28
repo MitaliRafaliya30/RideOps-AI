@@ -1,0 +1,105 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": "Data Factory name",
+            "defaultValue": "adf-rideops-dev1"
+        },
+        "LS_SRC_LOCAL_FHVHV_password": {
+            "type": "secureString",
+            "metadata": "Secure string for 'password' of 'LS_SRC_LOCAL_FHVHV'"
+        },
+        "LS_ADLS_RIDEOPS_accountKey": {
+            "type": "secureString",
+            "metadata": "Secure string for 'accountKey' of 'LS_ADLS_RIDEOPS'"
+        },
+        "ls_postgres_rideops_ai_db_password": {
+            "type": "secureString",
+            "metadata": "Secure string for 'password' of 'ls_postgres_rideops_ai_db'"
+        },
+        "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
+            "type": "string",
+            "defaultValue": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\fhvhv"
+        },
+        "LS_SRC_LOCAL_FHVHV_properties_typeProperties_userId": {
+            "type": "string",
+            "defaultValue": "meet\\win-11"
+        },
+        "LS_ADLS_RIDEOPS_properties_typeProperties_url": {
+            "type": "string",
+            "defaultValue": "https://strideopsdev1.dfs.core.windows.net/"
+        },
+        "ls_postgres_rideops_ai_db_properties_typeProperties_server": {
+            "type": "string",
+            "defaultValue": "localhost"
+        },
+        "ls_postgres_rideops_ai_db_properties_typeProperties_database": {
+            "type": "string",
+            "defaultValue": "rideops_ai_db"
+        },
+        "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
+            "type": "string",
+            "defaultValue": "adf_reader"
+        },
+        "containerUri": {
+            "type": "string",
+            "metadata": "URI to storage account containing linked ARM templates"
+        },
+        "containerSasToken": {
+            "type": "string",
+            "metadata": "Sas token to storage account containing linked ARM templates"
+        }
+    },
+    "variables": {
+        "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+    },
+    "resources": [
+        {
+            "name": "adf-rideops-dev1_ArmTemplate_0",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2024-03-01",
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "factoryName": {
+                        "value": "[parameters('factoryName')]"
+                    },
+                    "LS_SRC_LOCAL_FHVHV_password": {
+                        "value": "[parameters('LS_SRC_LOCAL_FHVHV_password')]"
+                    },
+                    "LS_ADLS_RIDEOPS_accountKey": {
+                        "value": "[parameters('LS_ADLS_RIDEOPS_accountKey')]"
+                    },
+                    "ls_postgres_rideops_ai_db_password": {
+                        "value": "[parameters('ls_postgres_rideops_ai_db_password')]"
+                    },
+                    "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
+                        "value": "[parameters('LS_SRC_LOCAL_FHVHV_properties_typeProperties_host')]"
+                    },
+                    "LS_SRC_LOCAL_FHVHV_properties_typeProperties_userId": {
+                        "value": "[parameters('LS_SRC_LOCAL_FHVHV_properties_typeProperties_userId')]"
+                    },
+                    "LS_ADLS_RIDEOPS_properties_typeProperties_url": {
+                        "value": "[parameters('LS_ADLS_RIDEOPS_properties_typeProperties_url')]"
+                    },
+                    "ls_postgres_rideops_ai_db_properties_typeProperties_server": {
+                        "value": "[parameters('ls_postgres_rideops_ai_db_properties_typeProperties_server')]"
+                    },
+                    "ls_postgres_rideops_ai_db_properties_typeProperties_database": {
+                        "value": "[parameters('ls_postgres_rideops_ai_db_properties_typeProperties_database')]"
+                    },
+                    "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
+                        "value": "[parameters('ls_postgres_rideops_ai_db_properties_typeProperties_username')]"
+                    }
+                }
+            },
+            "dependsOn": []
+        }
+    ]
+}

@@ -53,6 +53,17 @@ class BehaviorConfig:
     def total_incident_rate(self) -> float:
         return sum(self.incident_rates.values())
 
+    @classmethod
+    def from_config(cls, safety: Dict) -> "BehaviorConfig":
+        """Build from the `safety` section of simulator_config.yaml (missing keys keep defaults)."""
+        config = cls()
+        if safety.get("incident_rates"):
+            config.incident_rates = {k: float(v) for k, v in safety["incident_rates"].items()}
+        for key, value in (safety.get("normal_behavior") or {}).items():
+            if hasattr(config, key):
+                setattr(config, key, float(value))
+        return config
+
 
 @dataclass
 class TripShape:

@@ -2,6 +2,8 @@
 Shared pytest fixtures.
 """
 
+from random import Random
+
 import networkx as nx
 import pandas as pd
 import pytest
@@ -75,3 +77,25 @@ def grid_router():
          for r in range(size) for c in range(size)]
     )
     return Router(graph=g, zone_nodes=zone_nodes)
+
+
+class FakePool:
+    """Minimal stand-in for EntityPool."""
+
+    def __init__(self, rng: Random):
+        self.rng = rng
+
+    def pick_passenger(self):
+        return {"id": self.rng.randint(1, 1000)}
+
+    def pick_driver(self):
+        return {"id": self.rng.randint(1, 100)}
+
+    def vehicle_for_driver(self, driver_id):
+        return {"id": driver_id}
+
+    def pick_zone(self):
+        return 999       # would be wrong in v2: zones must come from the planner
+
+    def pick_payment_method(self):
+        return 1

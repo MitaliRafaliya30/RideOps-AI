@@ -232,7 +232,7 @@ class RideEventGenerator:
                 
                 # Cancel (no-show)
                 cancel_timestamp = arrived_timestamp + timedelta(seconds=120)
-                cancellation_reason_id = 4  # "Passenger No Show"
+                cancellation_reason_id = 7  # "Rider No Show" (4 is "Payment Failed")
                 
                 cancelled_event = self._create_event(
                     event_type="cancelled",
@@ -376,7 +376,8 @@ class RideEventGenerator:
             "event_id": str(uuid.uuid4()),
             "ride_id": ride_id,
             "event_type": event_type,
-            "event_timestamp": timestamp.isoformat(),
+            # UTC, ISO-8601 with Z (ADR-013), same format as the GPS messages
+            "event_timestamp": timestamp.isoformat(timespec="milliseconds") + "Z",
             "passenger_id": passenger_id,
             "driver_id": driver_id,
             "vehicle_id": vehicle_id,

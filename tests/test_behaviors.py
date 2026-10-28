@@ -156,3 +156,12 @@ def test_incident_rate_is_about_two_percent(grid_router):
     counts = Counter(injector.choose_incident(rng) for _ in range(50_000))
     incidents = sum(v for k, v in counts.items() if k is not None)
     assert incidents / 50_000 == pytest.approx(BehaviorConfig().total_incident_rate, abs=0.003)
+
+
+def test_config_section_overrides_defaults():
+    cfg = BehaviorConfig.from_config({
+        "incident_rates": {"long_stop": 0.1},
+        "normal_behavior": {"dropout_prob": 0.5, "not_a_setting": 1},
+    })
+    assert cfg.incident_rates == {"long_stop": 0.1}
+    assert cfg.dropout_prob == 0.5 and cfg.traffic_stops_per_km == BehaviorConfig().traffic_stops_per_km

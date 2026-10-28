@@ -202,6 +202,32 @@
             "width": 234
           },
           "zIndex": 13
+        },
+        {
+          "location": {
+            "x": 2351.9537378255,
+            "y": 379.19566300000008
+          },
+          "nodeIndex": "dq_all_quarantine",
+          "nodeLineageTag": "8ec4ee3b-d02d-4f67-a43f-fbda83633913",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2635.9537378255,
+            "y": 355.19566300000008
+          },
+          "nodeIndex": "dq_defect_scorecard",
+          "nodeLineageTag": "919f7e93-2ee6-48e4-b6d2-6645284c8043",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 0
         }
       ],
       "name": "All tables",

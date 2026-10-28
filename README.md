@@ -249,27 +249,32 @@ The revenue bug is the one worth dwelling on: the number *looked* plausible unti
 ## 📁 Repository Structure
 
 ```
-rideops-ai/
-├── database/
-│   ├── generators/          # Entity pool, timing, fares, defect injection
-│   ├── ddl/                 # PostgreSQL schema
-│   └── seed/                # Master data seeding
+RideOps-AI/
+├── simulator.py                 # Ride event simulator entry point
 ├── config/
-│   └── simulator_config.yaml
-├── transformations/
-│   ├── bronze/              # Event Hubs, Auto Loader, Postgres reference
-│   ├── silver/              # SCD2, dedup, ride state, DQ observability
-│   └── gold/                # Dimensions, facts, aggregate marts
-├── simulator.py
-└── docs/
-
-rideops-assistant/
-├── src/
-│   ├── connection.py        # SQLAlchemy → Databricks, Gold-scoped
-│   ├── agent.py             # LangGraph ReAct agent
-│   ├── guardrails.py        # Read-only, whitelist, row limit
-│   └── prompts.py           # Domain context
-└── app.py                   # Streamlit chat UI
+│   └── simulator_config.yaml    # Rates, defect injection, scenarios
+├── database/
+│   ├── ddl/                     # PostgreSQL master schema (9 tables)
+│   ├── generators/              # Entity pool, ride events, fares, defect injection, Event Hubs emitter
+│   └── utils/                   # Config loader, timing model, fare calculator
+├── tests/                       # Simulator unit tests (pytest)
+├── adf/                         # Azure Data Factory ARM export (2 pipelines, 5 datasets)
+├── databricks/
+│   ├── pipeline_settings.json   # Lakeflow pipeline config (secrets referenced, not stored)
+│   └── pipelines/
+│       ├── bronze/              # Event Hubs (Kafka), Auto Loader, Postgres snapshots
+│       ├── silver/              # Dedup, ride state (Auto CDC), SCD2, FHVHV, DQ scorecard
+│       └── gold/                # Dimensions, facts, aggregate marts
+├── RideOps Dashboard/           # Power BI project (PBIP)
+├── assistant/
+│   ├── src/
+│   │   ├── connection.py        # SQLAlchemy → Databricks, Gold-scoped
+│   │   ├── agent.py             # LangGraph ReAct agent
+│   │   ├── guardrails.py        # Read-only, whitelist, row limit
+│   │   └── prompts.py           # Domain context
+│   └── app.py                   # Streamlit chat UI
+├── data/                        # Zone lookup + FHVHV profiling report (raw trip files not committed)
+└── docs/images/                 # Architecture and dashboard screenshots
 ```
 
 ---

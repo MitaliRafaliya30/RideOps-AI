@@ -1,0 +1,25 @@
+{
+  "id": "1ea557de-869c-443d-b7b0-bec2e719af74",
+  "pipeline_type": "WORKSPACE",
+  "name": "RideOps Pipeline",
+  "configuration": {
+    "RideOps-Eventhub-Namespace": "ns-rideops-ai1",
+    "RideOps-Eventhub": "ride-events",
+    "connection_string": "{{secrets/rideops/eventhub-connection-string}}"
+  },
+  "libraries": [
+    {
+      "glob": {
+        "include": "/Workspace/Users/miralirafaliya26@gmail.com/RideOps Pipeline/RideOps Pipeline/transformations/**"
+      }
+    }
+  ],
+  "schema": "bronze",
+  "continuous": false,
+  "development": false,
+  "photon": true,
+  "channel": "CURRENT",
+  "catalog": "rideops_ai",
+  "serverless": true,
+  "root_path": "/Workspace/Users/miralirafaliya26@gmail.com/RideOps Pipeline/RideOps Pipeline"
+}

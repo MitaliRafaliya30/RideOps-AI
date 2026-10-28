@@ -19,6 +19,10 @@
             "type": "secureString",
             "metadata": "Secure string for 'password' of 'ls_postgres_rideops_ai_db'"
         },
+        "LS_SRC_LOCAL_SIM_password": {
+            "type": "secureString",
+            "metadata": "Secure string for 'password' of 'LS_SRC_LOCAL_SIM'"
+        },
         "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
             "type": "string",
             "defaultValue": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\fhvhv"
@@ -42,6 +46,14 @@
         "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
             "type": "string",
             "defaultValue": "adf_reader"
+        },
+        "LS_SRC_LOCAL_SIM_properties_typeProperties_host": {
+            "type": "string",
+            "defaultValue": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\backfill"
+        },
+        "LS_SRC_LOCAL_SIM_properties_typeProperties_userId": {
+            "type": "string",
+            "defaultValue": "meet\\win-11"
         }
     },
     "variables": {
@@ -123,6 +135,30 @@
                     },
                     "sslMode": 0,
                     "authenticationType": "Basic"
+                },
+                "connectVia": {
+                    "referenceName": "IR-RideOps-Local",
+                    "type": "IntegrationRuntimeReference"
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/integrationRuntimes/IR-RideOps-Local')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_SRC_LOCAL_SIM')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "FileServer",
+                "typeProperties": {
+                    "host": "[parameters('LS_SRC_LOCAL_SIM_properties_typeProperties_host')]",
+                    "userId": "[parameters('LS_SRC_LOCAL_SIM_properties_typeProperties_userId')]",
+                    "password": {
+                        "type": "SecureString",
+                        "value": "[parameters('LS_SRC_LOCAL_SIM_password')]"
+                    }
                 },
                 "connectVia": {
                     "referenceName": "IR-RideOps-Local",
@@ -386,6 +422,67 @@
             ]
         },
         {
+            "name": "[concat(parameters('factoryName'), '/DS_SRC_SIM_FOLDER')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "LS_SRC_LOCAL_SIM",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "pFolder": {
+                        "type": "string"
+                    }
+                },
+                "annotations": [],
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "FileServerLocation",
+                        "folderPath": {
+                            "value": "@dataset().pFolder",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/LS_SRC_LOCAL_SIM')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SINK_ADLS_FOLDER')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "LS_ADLS_RIDEOPS",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "pFolder": {
+                        "type": "string"
+                    }
+                },
+                "annotations": [],
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": {
+                            "value": "@dataset().pFolder",
+                            "type": "Expression"
+                        },
+                        "fileSystem": "rideops"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/LS_ADLS_RIDEOPS')]"
+            ]
+        },
+        {
             "name": "[concat(parameters('factoryName'), '/PL_INGEST_FHVHV_FILES')]",
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
@@ -397,8 +494,8 @@
                         "dependsOn": [],
                         "policy": {
                             "timeout": "0.12:00:00",
-                            "retry": 0,
-                            "retryIntervalInSeconds": 30,
+                            "retry": 2,
+                            "retryIntervalInSeconds": 60,
                             "secureOutput": false,
                             "secureInput": false
                         },
@@ -470,8 +567,8 @@
                                     "dependsOn": [],
                                     "policy": {
                                         "timeout": "0.12:00:00",
-                                        "retry": 0,
-                                        "retryIntervalInSeconds": 30,
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 60,
                                         "secureOutput": false,
                                         "secureInput": false
                                     },
@@ -524,8 +621,8 @@
                                                 "dependsOn": [],
                                                 "policy": {
                                                     "timeout": "0.12:00:00",
-                                                    "retry": 0,
-                                                    "retryIntervalInSeconds": 30,
+                                                    "retry": 2,
+                                                    "retryIntervalInSeconds": 60,
                                                     "secureOutput": false,
                                                     "secureInput": false
                                                 },
@@ -630,8 +727,8 @@
                                     "dependsOn": [],
                                     "policy": {
                                         "timeout": "0.12:00:00",
-                                        "retry": 0,
-                                        "retryIntervalInSeconds": 30,
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 60,
                                         "secureOutput": false,
                                         "secureInput": false
                                     },
@@ -715,6 +812,267 @@
             "dependsOn": [
                 "[concat(variables('factoryId'), '/datasets/ds_postgres_rideops')]",
                 "[concat(variables('factoryId'), '/datasets/ds_adls_reference')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/PL_INGEST_SIM_BACKFILL')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "FEACH_STREAM_TABLES",
+                        "type": "ForEach",
+                        "dependsOn": [],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@pipeline().parameters.streamTables",
+                                "type": "Expression"
+                            },
+                            "isSequential": true,
+                            "activities": [
+                                {
+                                    "name": "COPY_STREAM_TABLE",
+                                    "type": "Copy",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "timeout": "0.12:00:00",
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 58,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "source": {
+                                            "type": "BinarySource",
+                                            "storeSettings": {
+                                                "type": "FileServerReadSettings",
+                                                "recursive": true
+                                            },
+                                            "formatSettings": {
+                                                "type": "BinaryReadSettings"
+                                            }
+                                        },
+                                        "sink": {
+                                            "type": "BinarySink",
+                                            "storeSettings": {
+                                                "type": "AzureBlobFSWriteSettings",
+                                                "maxConcurrentConnections": 1,
+                                                "copyBehavior": "PreserveHierarchy",
+                                                "blockSizeInMB": 4
+                                            }
+                                        },
+                                        "enableStaging": false,
+                                        "parallelCopies": 1
+                                    },
+                                    "inputs": [
+                                        {
+                                            "referenceName": "DS_SRC_SIM_FOLDER",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "pFolder": {
+                                                    "value": "@concat(pipeline().parameters.runFolder, '/', item())",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "outputs": [
+                                        {
+                                            "referenceName": "DS_SINK_ADLS_FOLDER",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "pFolder": {
+                                                    "value": "@concat('landing/sim/', pipeline().parameters.runFolder, '/',  item())",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "FEACH_LABEL_TABLES",
+                        "type": "ForEach",
+                        "dependsOn": [
+                            {
+                                "activity": "FEACH_STREAM_TABLES",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@pipeline().parameters.labelTables",
+                                "type": "Expression"
+                            },
+                            "isSequential": true,
+                            "activities": [
+                                {
+                                    "name": "COPY_LABEL_TABLE",
+                                    "type": "Copy",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "timeout": "0.12:00:00",
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 58,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "source": {
+                                            "type": "BinarySource",
+                                            "storeSettings": {
+                                                "type": "FileServerReadSettings",
+                                                "recursive": true
+                                            },
+                                            "formatSettings": {
+                                                "type": "BinaryReadSettings"
+                                            }
+                                        },
+                                        "sink": {
+                                            "type": "BinarySink",
+                                            "storeSettings": {
+                                                "type": "AzureBlobFSWriteSettings",
+                                                "maxConcurrentConnections": 1,
+                                                "copyBehavior": "PreserveHierarchy",
+                                                "blockSizeInMB": 4
+                                            }
+                                        },
+                                        "enableStaging": false,
+                                        "parallelCopies": 1
+                                    },
+                                    "inputs": [
+                                        {
+                                            "referenceName": "DS_SRC_SIM_FOLDER",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "pFolder": {
+                                                    "value": "@concat(pipeline().parameters.runFolder, '/', item())",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "outputs": [
+                                        {
+                                            "referenceName": "DS_SINK_ADLS_FOLDER",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "pFolder": {
+                                                    "value": "@concat('labels/safety/', pipeline().parameters.runFolder, '/', item())\n",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "parameters": {
+                    "runFolder": {
+                        "type": "string",
+                        "defaultValue": "run_2026-05-04_7d_50000r_seed42"
+                    },
+                    "streamTables": {
+                        "type": "array",
+                        "defaultValue": [
+                            "ride_events",
+                            "route_plans",
+                            "gps_pings"
+                        ]
+                    },
+                    "labelTables": {
+                        "type": "array",
+                        "defaultValue": [
+                            "incident_labels",
+                            "behaviors"
+                        ]
+                    }
+                },
+                "annotations": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/DS_SRC_SIM_FOLDER')]",
+                "[concat(variables('factoryId'), '/datasets/DS_SINK_ADLS_FOLDER')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/TR_DAILY_POSTGRES')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "runtimeState": "Stopped",
+                "pipelines": [
+                    {
+                        "pipelineReference": {
+                            "referenceName": "pl_postgres_to_adls_bronze",
+                            "type": "PipelineReference"
+                        },
+                        "parameters": {}
+                    }
+                ],
+                "type": "ScheduleTrigger",
+                "typeProperties": {
+                    "recurrence": {
+                        "frequency": "Day",
+                        "interval": 1,
+                        "startTime": "2026-10-29T02:00:00",
+                        "timeZone": "India Standard Time",
+                        "schedule": {}
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/pipelines/pl_postgres_to_adls_bronze')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/TR_MONTHLY_FHVHV')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "runtimeState": "Stopped",
+                "pipelines": [
+                    {
+                        "pipelineReference": {
+                            "referenceName": "PL_INGEST_FHVHV_FILES",
+                            "type": "PipelineReference"
+                        },
+                        "parameters": {}
+                    }
+                ],
+                "type": "ScheduleTrigger",
+                "typeProperties": {
+                    "recurrence": {
+                        "frequency": "Month",
+                        "interval": 1,
+                        "startTime": "2026-11-02T03:00:00",
+                        "timeZone": "India Standard Time",
+                        "schedule": {
+                            "monthDays": [
+                                2
+                            ]
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/pipelines/PL_INGEST_FHVHV_FILES')]"
             ]
         }
     ]

@@ -158,9 +158,15 @@ class DefectInjector:
         """
         Defect 2: Simulate late-arriving terminal event
 
-        Simulates: Network delay causing final event timestamp to be much later
-        than when it was actually emitted (event appears out of order)
+        Simulates: the phone was offline, so the final event is SENT minutes
+        after it happened. Its event_timestamp stays correct; only delivery
+        is late (Kafka enqueue time > event time).
         Impact: Silver layer must handle late arrivals with watermarking
+
+        The delay is passed as the internal field `_emit_delay_s`, which the
+        v2 runner uses to hold the event back and strips before sending.
+        (v1 moved event_timestamp into the future instead, which made the event
+        look early, not late, so the scorecard could never measure this defect.)
         """
 
         if len(events) < 2:
@@ -169,20 +175,13 @@ class DefectInjector:
         # Get the last (terminal) event
         terminal = events[-1]
 
-        # Increase its timestamp to simulate arrival delay
         severity = self.defect_2.get("severity", "low")
         delay_range = self.defect_2.get("holdback_delay_seconds", {"min": 60, "max": 180})
 
         if severity == "high":
             delay_range = {"min": 300, "max": 900}  # 5-15 minutes
 
-        delay = self.rng.randint(delay_range.get("min", 60), delay_range.get("max", 180))
-
-        # Parse timestamp and add delay
-        from datetime import datetime, timedelta
-        ts = datetime.fromisoformat(terminal["event_timestamp"])
-        delayed_ts = ts + timedelta(seconds=delay)
-        terminal["event_timestamp"] = delayed_ts.isoformat()
+        terminal["_emit_delay_s"] = self.rng.randint(delay_range.get("min", 60), delay_range.get("max", 180))
 
         return events
     
@@ -230,12 +229,13 @@ class DefectInjector:
         duplicate["event_id"] = str(uuid.uuid4())
         
         # Slightly offset timestamp
+        # Timestamps are UTC with a Z suffix; keep that exact format
         from datetime import datetime, timedelta
-        ts = datetime.fromisoformat(duplicate["event_timestamp"])
+        ts = datetime.fromisoformat(duplicate["event_timestamp"].rstrip("Z"))
         gap = self.defect_4.get("timestamp_gap_seconds", {"min": 0.1, "max": 2.0})
         offset = self.rng.uniform(gap.get("min", 0.1), gap.get("max", 2.0))
         offset_ts = ts + timedelta(seconds=offset)
-        duplicate["event_timestamp"] = offset_ts.isoformat()
+        duplicate["event_timestamp"] = offset_ts.isoformat(timespec="milliseconds") + "Z"
         
         # Insert after original
         idx = events.index(event_to_dup)

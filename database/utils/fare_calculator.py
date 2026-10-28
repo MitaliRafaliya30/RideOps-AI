@@ -38,7 +38,17 @@ class FareCalculator:
     
     # Driver split
     DRIVER_SHARE_PERCENT = Decimal("0.75") # Driver gets 75%
-    
+
+    @classmethod
+    def set_rates(cls, base_fare: float, per_mile: float, per_minute: float) -> None:
+        """
+        Replace the base fare formula, e.g. with rates fitted on real NYC
+        trips (simulation/calibrate.py). Surcharges, taxes and tips are unchanged.
+        """
+        cls.BASE_FARE = Decimal(str(round(base_fare, 2)))
+        cls.DISTANCE_RATE = Decimal(str(round(per_mile, 2)))
+        cls.TIME_RATE = Decimal(str(round(per_minute, 2)))
+
     @staticmethod
     def calculate_fare(
         trip_miles: float,

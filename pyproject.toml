@@ -6,13 +6,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "azure-eventhub==5.11.5",
+    "duckdb>=1.1",
     "faker>=40.36.0",
     "geopandas>=1.0",
+    "matplotlib>=3.9",
     "osmnx>=2.0",
     "pandas>=3.0.5",
     "polyline>=2.0",
     "psycopg2-binary>=2.9.12",
     "psycopg[binary]>=3.3.4",
+    "pyarrow>=17",
     "pyspark==3.5.0",
     "pytest>=9.1.1",
     "python-dotenv>=1.2.2",

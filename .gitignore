@@ -20,6 +20,8 @@ data/fhvhv/
 *.parquet
 # Generated geo reference data (rebuild with python -m geodata.build_zones / build_road_network)
 data/reference/
+# Simulator backfill output (regenerate with python -m simulation.run backfill)
+data/backfill/
 # OSMnx download cache
 cache/
 

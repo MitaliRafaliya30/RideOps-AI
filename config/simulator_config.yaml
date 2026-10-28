@@ -1,6 +1,7 @@
 ################################################################################
 # RideOps AI - Event Simulator Configuration
 # Defines all runtime behavior for generator, defects, emission, and logging
+# v2 (simulation/run.py) also reads the `safety` and `gps` sections
 ################################################################################
 
 simulator:
@@ -36,6 +37,8 @@ event_hubs:
 
 defects:
   # Master enable/disable for all defects
+  # Every rate is the share of RIDES a defect hits (each affected ride gets one
+  # corrupted event), applied by DefectInjector.inject() once per ride.
   enabled: true
   
   defect_1:
@@ -57,12 +60,12 @@ defects:
   defect_3:
     name: exact_duplicate
     enabled: true
-    rate: 0.02                        # 2% of events
+    rate: 0.02                        # 2% of rides
   
   defect_4:
     name: near_duplicate
     enabled: true
-    rate: 0.03                        # 3% of events
+    rate: 0.03                        # 3% of rides
     severity: low
     timestamp_gap_seconds:
       min: 0.1
@@ -71,18 +74,18 @@ defects:
   defect_5:
     name: null_required_field
     enabled: true
-    rate: 0.02                        # 2% of events
+    rate: 0.02                        # 2% of rides
     severity: low
   
   defect_6:
     name: invalid_event_type
     enabled: true
-    rate: 0.01                        # 1% of events
+    rate: 0.01                        # 1% of rides
   
   defect_7:
     name: out_of_range
     enabled: true
-    rate: 0.04                        # 4% of events
+    rate: 0.04                        # 4% of rides
     severity: low
   
   defect_8:
@@ -94,6 +97,27 @@ defects:
       - assigned
       - accepted
       - arrived
+
+safety:
+  # v2 rider-safety simulation (simulation/behaviors.py)
+  incident_rates:                     # share of completed trips; at most one incident per trip
+    route_deviation: 0.006
+    long_stop: 0.005
+    wrong_dropoff: 0.003
+    possible_crash: 0.002
+    gps_spoofing: 0.004
+  normal_behavior:                    # never labelled as incidents
+    traffic_stops_per_km: 0.6
+    traffic_stop_median_s: 25
+    max_stop_share: 0.35
+    dropout_prob: 0.08
+    innocent_long_stop_prob: 0.03     # hard negative: 2-4 min stop
+    innocent_detour_prob: 0.03        # hard negative: 200-600 m detour
+
+gps:
+  ping_interval_s: 10
+  position_noise_m: 4                 # std dev of GPS position error
+  speed_noise: 0.05                   # relative std dev of reported speed
 
 generation:
   # Clean generator tuning

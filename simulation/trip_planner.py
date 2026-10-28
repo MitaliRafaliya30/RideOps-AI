@@ -56,7 +56,8 @@ class Calibration:
 class Trip:
     route: RoutePlan
     start_ts: datetime
-    point_times_s: List[float]     # real seconds from start, one per route point
+    point_times_s: List[float]     # actual seconds from start, one per route point
+    planned_duration_s: float      # what navigation predicts: route at the hour's typical traffic
 
     @property
     def pickup_zone(self) -> int:
@@ -96,9 +97,15 @@ class TripPlanner:
     def build_trip(self, pickup_zone: int, dropoff_zone: int, start_ts: datetime, rng: Random) -> Trip:
         route = self.router.plan(pickup_zone, dropoff_zone, rng)
 
-        factor = self.calibration.traffic_factor(start_ts)
+        typical = self.calibration.traffic_factor(start_ts)
+        actual = typical
         if self.traffic_noise:
             # Lognormal with median 1, so the hourly factor stays the typical value
-            factor *= math.exp(rng.gauss(0.0, self.traffic_noise))
+            actual *= math.exp(rng.gauss(0.0, self.traffic_noise))
 
-        return Trip(route, start_ts, [t * factor for t in route.point_times_s])
+        return Trip(
+            route=route,
+            start_ts=start_ts,
+            point_times_s=[t * actual for t in route.point_times_s],
+            planned_duration_s=route.duration_s * typical,
+        )

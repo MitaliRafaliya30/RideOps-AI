@@ -8,6 +8,7 @@ shape of the route_plan contract (docs/DATA_DESIGN.md, section 2.2).
 The graph is loaded once and reused; routing uses travel_time as weight.
 """
 
+import math
 from dataclasses import dataclass, field
 from random import Random
 from typing import List, Optional, Tuple
@@ -19,6 +20,15 @@ import polyline
 
 from geodata.config import ROAD_GRAPH_FILE, ZONE_NODES_CSV
 
+EARTH_RADIUS_M = 6_371_000
+
+
+def haversine_m(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+    """Great-circle distance in meters between two (lat, lon) points."""
+    lat1, lon1, lat2, lon2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(h))
+
 
 @dataclass
 class RoutePlan:
@@ -28,6 +38,7 @@ class RoutePlan:
     coords: List[Tuple[float, float]]        # (lat, lon) along the path
     edge_lengths_m: List[float] = field(repr=False)
     edge_times_s: List[float] = field(repr=False)
+    point_times_s: List[float] = field(repr=False)   # free-flow seconds from start, one per coord
 
     @property
     def distance_m(self) -> float:
@@ -84,7 +95,8 @@ class Router:
         return plan
 
     def _to_plan(self, pickup_zone: int, dropoff_zone: int, path: List[int]) -> RoutePlan:
-        coords, lengths, times = [], [], []
+        coords, lengths, times, point_times = [], [], [], []
+        elapsed = 0.0
         for u, v in zip(path[:-1], path[1:]):
             # Parallel edges are possible; take the fastest one, same as routing did
             edge = min(self.graph[u][v].values(), key=lambda e: e["travel_time"])
@@ -99,7 +111,20 @@ class Router:
                     (self.graph.nodes[u]["y"], self.graph.nodes[u]["x"]),
                     (self.graph.nodes[v]["y"], self.graph.nodes[v]["x"]),
                 ]
-            coords.extend(segment if not coords else segment[1:])
+
+            # Spread the edge's travel time over its shape points by distance,
+            # so the car moves at the edge's speed along curves too
+            hops = [haversine_m(a, b) for a, b in zip(segment[:-1], segment[1:])]
+            shape_length = sum(hops) or 1.0
+            seg_times = [elapsed]
+            for hop in hops:
+                seg_times.append(seg_times[-1] + edge["travel_time"] * hop / shape_length)
+
+            if coords:
+                segment, seg_times = segment[1:], seg_times[1:]
+            coords.extend(segment)
+            point_times.extend(seg_times)
+            elapsed += float(edge["travel_time"])
 
         coords = [(round(lat, 6), round(lon, 6)) for lat, lon in coords]
-        return RoutePlan(pickup_zone, dropoff_zone, path, coords, lengths, times)
+        return RoutePlan(pickup_zone, dropoff_zone, path, coords, lengths, times, point_times)

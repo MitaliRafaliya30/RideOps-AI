@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "azure-eventhub==5.11.5",
+    "duckdb>=1.1",
     "faker>=40.36.0",
     "geopandas>=1.0",
     "osmnx>=2.0",

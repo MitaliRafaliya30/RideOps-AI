@@ -10,15 +10,21 @@ import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from random import Random
-from typing import List, Dict, Any
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from database.utils.constants import EVENT_TYPES, CANCELLATION_REASONS
 from database.utils.timing_model import TimingModel
 from database.utils.fare_calculator import FareCalculator
 from database.generators.entity_pool import EntityPool
 
+if TYPE_CHECKING:
+    from simulation.trip_planner import Trip, TripPlanner
+
 
 logger = logging.getLogger(__name__)
+
+# JFK (132) and LaGuardia (138): pickups or dropoffs here pay the airport fee
+AIRPORT_ZONE_IDS = {132, 138}
 
 
 class RideEventGenerator:
@@ -29,44 +35,64 @@ class RideEventGenerator:
     without defects. One ride = 5-7 events depending on completion.
     """
     
-    def __init__(self, entity_pool: EntityPool, config: Dict[str, Any], rng: Random):
+    def __init__(self, entity_pool: EntityPool, config: Dict[str, Any], rng: Random,
+                 trip_planner: Optional["TripPlanner"] = None):
         """
         Initialize generator
-        
+
         Args:
             entity_pool: Loaded entity pool (passengers, drivers, vehicles, zones)
             config: Configuration dict from config_loader
             rng: Seeded Random instance
+            trip_planner: v2 only. When set, zones follow the real NYC
+                origin-destination pattern and completed trips drive a real
+                road route (distance, duration and fare come from the route).
+                When None, v1 behaviour: random zones and random distance.
         """
         self.pool = entity_pool
         self.config = config
         self.rng = rng
         self.timing = TimingModel(rng)
-        
+        self.trip_planner = trip_planner
+
         self.completion_rate = config.get("generation", {}).get("completion_rate", 0.85)
-        
+
         logger.info("RideEventGenerator initialized")
-    
+
     # ==================== MAIN GENERATION ====================
-    
+
     def generate_ride(self, birth_timestamp: datetime) -> List[Dict[str, Any]]:
         """
         Generate one complete ride (sequence of events)
-        
+
         Args:
             birth_timestamp: When the ride was requested (UTC datetime)
-        
+
         Returns:
             List of event dicts, in chronological order
         """
-        
+        events, _ = self.generate_ride_with_trip(birth_timestamp)
+        return events
+
+    def generate_ride_with_trip(self, birth_timestamp: datetime) -> Tuple[List[Dict[str, Any]], Optional["Trip"]]:
+        """
+        Same as generate_ride, plus the driven Trip for completed rides.
+
+        The Trip (route + timestamp per route point) is what the GPS
+        generator replays. It is None for cancelled rides and in v1 mode.
+        """
+
         ride_id = str(uuid.uuid4())
         events = []
-        
+        trip = None
+
         # Step 1: Requested event
         passenger = self.pool.pick_passenger()
-        pickup_zone = self.pool.pick_zone()
-        dropoff_zone = self.pool.pick_zone()
+        if self.trip_planner:
+            pickup_zone, dropoff_zone = self.trip_planner.sample_od(self.rng)
+        else:
+            pickup_zone = self.pool.pick_zone()
+            dropoff_zone = self.pool.pick_zone()
         payment_method = self.pool.pick_payment_method()
         
         requested_event = self._create_event(
@@ -92,7 +118,7 @@ class RideEventGenerator:
         if not vehicle:
             # No vehicle for driver (shouldn't happen, but handle it)
             logger.warning(f"No vehicle for driver {driver['id']}, skipping ride")
-            return []
+            return [], None
         
         assigned_event = self._create_event(
             event_type="assigned",
@@ -107,8 +133,10 @@ class RideEventGenerator:
         )
         events.append(assigned_event)
         
-        # Step 3: Determine if ride completes or cancels
-        if not self.timing.should_complete_ride():
+        # Step 3: Determine if ride completes or cancels.
+        # Uses generation.completion_rate from config (TimingModel's own
+        # constant used to win here, so the config value had no effect).
+        if not self.rng.random() < self.completion_rate:
             # Ride gets cancelled
             cancel_stage = self.timing.cancellation_stage()
             
@@ -220,7 +248,7 @@ class RideEventGenerator:
                 )
                 events.append(cancelled_event)
             
-            return events
+            return events, None
         
         # Ride completes (not cancelled)
         # Step 4: Accepted
@@ -275,14 +303,20 @@ class RideEventGenerator:
         events.append(started_event)
         
         # Step 7: Completed
-        # Generate trip distance and calculate trip duration
-        trip_miles = self.timing.trip_distance()
-        trip_duration_seconds = self.timing.time_trip(trip_miles)
-        
+        # v2: distance and duration come from the real road route at this
+        # hour's traffic. v1: random distance, fixed average speed.
+        if self.trip_planner:
+            trip = self.trip_planner.build_trip(pickup_zone, dropoff_zone, started_timestamp, self.rng)
+            trip_miles = round(trip.distance_miles, 2)
+            trip_duration_seconds = int(round(trip.duration_s))
+        else:
+            trip_miles = self.timing.trip_distance()
+            trip_duration_seconds = self.timing.time_trip(trip_miles)
+
         completed_timestamp = started_timestamp + timedelta(seconds=trip_duration_seconds)
-        
+
         # Calculate fare
-        is_airport = dropoff_zone in [239]  # Example: JFK Airport zone
+        is_airport = pickup_zone in AIRPORT_ZONE_IDS or dropoff_zone in AIRPORT_ZONE_IDS
         has_congestion = pickup_zone in [41, 42, 43] or dropoff_zone in [41, 42, 43]
         
         fare_breakdown = FareCalculator.calculate_fare(
@@ -309,7 +343,7 @@ class RideEventGenerator:
         )
         events.append(completed_event)
         
-        return events
+        return events, trip
     
     # ==================== EVENT CREATION ====================
     

@@ -18,6 +18,10 @@ secrets.env
 # Large source data (download separately, see README)
 data/fhvhv/
 *.parquet
+# Generated geo reference data (rebuild with python -m geodata.build_zones / build_road_network)
+data/reference/
+# OSMnx download cache
+cache/
 
 # Raw Databricks export kept locally as a backup; clean code lives in databricks/
 transformations/

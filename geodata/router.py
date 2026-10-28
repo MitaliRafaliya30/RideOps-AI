@@ -39,6 +39,7 @@ class RoutePlan:
     edge_lengths_m: List[float] = field(repr=False)
     edge_times_s: List[float] = field(repr=False)
     point_times_s: List[float] = field(repr=False)   # free-flow seconds from start, one per coord
+    node_point_index: List[int] = field(repr=False)  # position in coords of each node in `nodes`
 
     @property
     def distance_m(self) -> float:
@@ -71,6 +72,33 @@ class Router:
     def route_nodes(self, origin: int, destination: int) -> List[int]:
         return nx.shortest_path(self.graph, origin, destination, weight="travel_time")
 
+    def node_latlon(self, node: int) -> Tuple[float, float]:
+        return self.graph.nodes[node]["y"], self.graph.nodes[node]["x"]
+
+    def path_plan(self, path: List[int], pickup_zone: int = 0, dropoff_zone: int = 0) -> RoutePlan:
+        """Timed coordinates for an explicit node path (used for detours)."""
+        return self._to_plan(pickup_zone, dropoff_zone, path)
+
+    def random_node_near(self, center: int, min_m: float, max_m: float, rng: Random,
+                         avoid: List[Tuple[float, float]] = (), avoid_m: float = 0.0) -> Optional[int]:
+        """
+        A node whose straight-line distance from `center` is between min_m and
+        max_m, and at least avoid_m from every point in `avoid` (e.g. the
+        planned route). Searches only nodes reachable within a road-distance
+        cutoff, so it stays fast on the full NYC graph.
+        """
+        reachable = nx.single_source_dijkstra_path_length(self.graph, center, cutoff=max_m * 2, weight="length")
+        origin = self.node_latlon(center)
+        candidates = []
+        for node in reachable:
+            point = self.node_latlon(node)
+            if not min_m <= haversine_m(origin, point) <= max_m:
+                continue
+            if avoid_m and any(haversine_m(point, a) < avoid_m for a in avoid):
+                continue
+            candidates.append(node)
+        return rng.choice(sorted(candidates)) if candidates else None
+
     def plan(self, pickup_zone: int, dropoff_zone: int, rng: Random,
              min_distance_m: float = 300.0, attempts: int = 5) -> RoutePlan:
         """
@@ -96,6 +124,7 @@ class Router:
 
     def _to_plan(self, pickup_zone: int, dropoff_zone: int, path: List[int]) -> RoutePlan:
         coords, lengths, times, point_times = [], [], [], []
+        node_index = [0]
         elapsed = 0.0
         for u, v in zip(path[:-1], path[1:]):
             # Parallel edges are possible; take the fastest one, same as routing did
@@ -124,7 +153,8 @@ class Router:
                 segment, seg_times = segment[1:], seg_times[1:]
             coords.extend(segment)
             point_times.extend(seg_times)
+            node_index.append(len(coords) - 1)
             elapsed += float(edge["travel_time"])
 
         coords = [(round(lat, 6), round(lon, 6)) for lat, lon in coords]
-        return RoutePlan(pickup_zone, dropoff_zone, path, coords, lengths, times, point_times)
+        return RoutePlan(pickup_zone, dropoff_zone, path, coords, lengths, times, point_times, node_index)

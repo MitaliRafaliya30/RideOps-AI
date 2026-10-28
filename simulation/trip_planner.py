@@ -5,22 +5,24 @@ Plan realistic trips: where people travel, which road they take, how long it tak
   TripPlanner   samples a pickup/dropoff pair, routes it on real roads and
                 stretches free-flow time by the traffic of that hour
 
-A Trip carries a timestamp for every point of the route, which the GPS
+A Trip carries a timestamp for every point of its actual track, which the GPS
 generator interpolates to produce pings.
 """
 
 import bisect
 import itertools
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from random import Random
 from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from geodata.router import RoutePlan, Router
+from geodata.router import RoutePlan, Router, haversine_m
 from simulation.config import OD_MATRIX_CSV, SPEED_BY_HOUR_CSV
+from simulation.behaviors import BehaviorInjector, TripShape
+from simulation.timeline import Behavior, Timeline
 
 METERS_PER_MILE = 1609.34
 
@@ -54,10 +56,21 @@ class Calibration:
 
 @dataclass
 class Trip:
+    """
+    One completed trip: the plan the driver was given, and what actually happened.
+
+    `route` is the plan (sent as the route_plan message). The track is the
+    movement that produced the GPS: it equals the plan for a normal trip, and
+    differs when there was a detour, a stop, a crash or an early end.
+    """
     route: RoutePlan
     start_ts: datetime
-    point_times_s: List[float]     # actual seconds from start, one per route point
-    planned_duration_s: float      # what navigation predicts: route at the hour's typical traffic
+    track_coords: List[Tuple[float, float]]   # actual (lat, lon) points
+    track_times_s: List[float]                # actual seconds from start, one per point
+    planned_duration_s: float                 # what navigation predicts: route at the hour's typical traffic
+    behaviors: List[Behavior] = field(default_factory=list)
+    spoof_windows: List[Tuple[float, float, float, float]] = field(default_factory=list)
+    dropout_windows: List[Tuple[float, float]] = field(default_factory=list)
 
     @property
     def pickup_zone(self) -> int:
@@ -69,11 +82,11 @@ class Trip:
 
     @property
     def duration_s(self) -> float:
-        return self.point_times_s[-1]
+        return self.track_times_s[-1]
 
     @property
     def distance_m(self) -> float:
-        return self.route.distance_m
+        return sum(haversine_m(a, b) for a, b in zip(self.track_coords, self.track_coords[1:]))
 
     @property
     def distance_miles(self) -> float:
@@ -83,18 +96,30 @@ class Trip:
     def end_ts(self) -> datetime:
         return self.start_ts + timedelta(seconds=self.duration_s)
 
+    @property
+    def incidents(self) -> List[Behavior]:
+        return [b for b in self.behaviors if b.is_incident]
+
 
 class TripPlanner:
 
-    def __init__(self, router: Router, calibration: Calibration, traffic_noise: float = DEFAULT_TRAFFIC_NOISE):
+    def __init__(self, router: Router, calibration: Calibration, traffic_noise: float = DEFAULT_TRAFFIC_NOISE,
+                 injector: Optional[BehaviorInjector] = None):
+        """
+        injector: when set, trips get normal driving messiness and, at the
+        configured rates, safety incidents. When None, the car follows the
+        plan exactly at the hour's traffic speed.
+        """
         self.router = router
         self.calibration = calibration
         self.traffic_noise = traffic_noise
+        self.injector = injector
 
     def sample_od(self, rng: Random) -> Tuple[int, int]:
         return self.calibration.sample_od(rng)
 
-    def build_trip(self, pickup_zone: int, dropoff_zone: int, start_ts: datetime, rng: Random) -> Trip:
+    def build_trip(self, pickup_zone: int, dropoff_zone: int, start_ts: datetime, rng: Random,
+                   incident: Optional[str] = "auto") -> Trip:
         route = self.router.plan(pickup_zone, dropoff_zone, rng)
 
         typical = self.calibration.traffic_factor(start_ts)
@@ -103,9 +128,18 @@ class TripPlanner:
             # Lognormal with median 1, so the hourly factor stays the typical value
             actual *= math.exp(rng.gauss(0.0, self.traffic_noise))
 
+        if self.injector:
+            shape = self.injector.build(route, actual, rng, incident=incident)
+        else:
+            shape = TripShape(Timeline(route.coords, [t * actual for t in route.point_times_s]))
+
         return Trip(
             route=route,
             start_ts=start_ts,
-            point_times_s=[t * actual for t in route.point_times_s],
+            track_coords=shape.timeline.coords,
+            track_times_s=shape.timeline.times,
             planned_duration_s=route.duration_s * typical,
+            behaviors=shape.timeline.behaviors,
+            spoof_windows=shape.spoof_windows,
+            dropout_windows=shape.dropout_windows,
         )

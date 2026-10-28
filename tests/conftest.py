@@ -44,3 +44,34 @@ def calibration():
     ])
     speeds.loc[(speeds.day_type == "weekend") & (speeds.hour == 16), "traffic_factor"] = 2.0
     return Calibration(od=od, speeds=speeds)
+
+
+@pytest.fixture(scope="session")
+def grid_router():
+    """
+    A 20 x 20 street grid, ~200 m blocks (~3.8 km across), two-way streets
+    at 36 km/h free-flow. Zone 10 = west edge, zone 20 = east edge, 30 = rest.
+    Big enough for 1-3 km detours.
+    """
+    from geodata.router import haversine_m
+
+    size, dlat, dlon = 20, 0.0018, 0.00237
+    g = nx.MultiDiGraph()
+    node = lambda r, c: r * size + c
+    for r in range(size):
+        for c in range(size):
+            g.add_node(node(r, c), y=40.70 + r * dlat, x=-74.00 + c * dlon)
+    for r in range(size):
+        for c in range(size):
+            for r2, c2 in ((r + 1, c), (r, c + 1)):
+                if r2 < size and c2 < size:
+                    a, b = node(r, c), node(r2, c2)
+                    length = haversine_m((g.nodes[a]["y"], g.nodes[a]["x"]), (g.nodes[b]["y"], g.nodes[b]["x"]))
+                    for u, v in ((a, b), (b, a)):
+                        g.add_edge(u, v, length=length, travel_time=length / 10.0)
+
+    zone_nodes = pd.DataFrame(
+        [{"node_id": node(r, c), "LocationID": 10 if c == 0 else 20 if c == size - 1 else 30}
+         for r in range(size) for c in range(size)]
+    )
+    return Router(graph=g, zone_nodes=zone_nodes)

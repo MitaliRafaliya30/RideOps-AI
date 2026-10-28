@@ -7,10 +7,14 @@ Turn a driven Trip into the messages a driver's phone would send.
 Position at any moment is interpolated along the route using the trip's
 per-point timestamps, so the car is slow in traffic and fast on highways.
 Real GPS is not exact: each reported fix is shifted by a few meters of
-random error, and the phone reports how accurate it thinks it is.
+random error, and the phone reports how accurate it thinks it is. During
+a dropout no pings are sent; during spoofing the reported position is fake.
+
+Ground truth (incident labels, all behaviours) is produced here too, but
+goes to a separate training store, never onto the stream.
 """
 
-import bisect
+import json
 import math
 import uuid
 from dataclasses import dataclass
@@ -19,6 +23,7 @@ from random import Random
 from typing import Dict, List, Tuple
 
 from geodata.router import haversine_m
+from simulation.timeline import segment_at
 from simulation.trip_planner import Trip
 
 SCHEMA_VERSION = 1
@@ -55,22 +60,26 @@ class TripTrack:
     """Where the car is, how fast, and which way, at any time during a trip."""
 
     def __init__(self, trip: Trip):
-        self.coords = trip.route.coords
-        self.times = trip.point_times_s
+        self.coords = trip.track_coords
+        self.times = trip.track_times_s
 
     def at(self, elapsed_s: float) -> Fix:
         elapsed_s = min(max(elapsed_s, 0.0), self.times[-1])
-        i = bisect.bisect_right(self.times, elapsed_s) - 1
-        i = min(i, len(self.coords) - 2)
+        i, f = segment_at(self.coords, self.times, elapsed_s)
         a, b = self.coords[i], self.coords[i + 1]
-        t0, t1 = self.times[i], self.times[i + 1]
-
-        span = t1 - t0
-        f = (elapsed_s - t0) / span if span > 0 else 1.0
+        span = self.times[i + 1] - self.times[i]
         lat = a[0] + (b[0] - a[0]) * f
         lon = a[1] + (b[1] - a[1]) * f
         speed = haversine_m(a, b) / span * 3.6 if span > 0 else 0.0
-        return Fix(elapsed_s, lat, lon, speed, bearing_deg(a, b))
+        return Fix(elapsed_s, lat, lon, speed, self._heading(i))
+
+    def _heading(self, i: int) -> float:
+        """Direction of travel; while stopped, keep the last direction moved."""
+        for j in range(i, -1, -1):
+            a, b = self.coords[j], self.coords[j + 1]
+            if a != b:
+                return bearing_deg(a, b)
+        return 0.0
 
 
 class GpsGenerator:
@@ -104,16 +113,23 @@ class GpsGenerator:
     # ---------------- pings ----------------
 
     def ping_times(self, trip: Trip) -> List[float]:
-        """Every interval from the start, plus one final ping at the dropoff."""
+        """
+        Every interval from the start, plus one final ping at the dropoff.
+        Nothing is sent during a GPS dropout (no fix in a tunnel).
+        """
         times, t = [], 0.0
         while t < trip.duration_s:
-            times.append(t)
+            if t == 0.0 or not any(start <= t < end for start, end in trip.dropout_windows):
+                times.append(t)
             t += self.interval_s
         times.append(trip.duration_s)
         return times
 
     def ping_message(self, trip: Trip, ride_id: str, driver_id: int, seq_no: int, fix: Fix) -> Dict:
         lat, lon = self._add_position_error(fix.lat, fix.lon)
+        for start, end, dlat, dlon in trip.spoof_windows:
+            if start <= fix.elapsed_s < end:
+                lat, lon = lat + dlat, lon + dlon        # spoofed: phone reports a fake place
         speed = max(0.0, fix.speed_kmh * (1 + self.rng.gauss(0, self.speed_noise)))
         return {
             "message_type": "gps_ping",
@@ -135,6 +151,37 @@ class GpsGenerator:
         return [
             self.ping_message(trip, ride_id, driver_id, seq_no, track.at(t))
             for seq_no, t in enumerate(self.ping_times(trip), start=1)
+        ]
+
+    # ---------------- ground truth ----------------
+
+    def incident_labels(self, trip: Trip, ride_id: str) -> List[Dict]:
+        """Training labels (docs/DATA_DESIGN.md, section 2.4). Never sent on the stream."""
+        return [
+            {
+                "incident_id": str(uuid.UUID(int=self.rng.getrandbits(128))),
+                "ride_id": ride_id,
+                "incident_type": b.kind,
+                "start_ts": utc_iso(trip.start_ts + timedelta(seconds=b.start_s)),
+                "end_ts": utc_iso(trip.start_ts + timedelta(seconds=b.end_s)) if b.end_s is not None else None,
+                "severity": b.severity,
+                "params": json.dumps(b.params),
+            }
+            for b in trip.incidents
+        ]
+
+    def behavior_records(self, trip: Trip, ride_id: str) -> List[Dict]:
+        """Everything that happened on the trip, incidents and normal behaviour, for error analysis."""
+        return [
+            {
+                "ride_id": ride_id,
+                "kind": b.kind,
+                "is_incident": b.is_incident,
+                "start_ts": utc_iso(trip.start_ts + timedelta(seconds=b.start_s)),
+                "end_ts": utc_iso(trip.start_ts + timedelta(seconds=b.end_s)) if b.end_s is not None else None,
+                "params": json.dumps(b.params),
+            }
+            for b in trip.behaviors
         ]
 
     def _add_position_error(self, lat: float, lon: float) -> Tuple[float, float]:

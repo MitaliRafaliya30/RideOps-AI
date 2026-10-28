@@ -19,6 +19,10 @@
             "type": "secureString",
             "metadata": "Secure string for 'password' of 'ls_postgres_rideops_ai_db'"
         },
+        "LS_SRC_LOCAL_SIM_password": {
+            "type": "secureString",
+            "metadata": "Secure string for 'password' of 'LS_SRC_LOCAL_SIM'"
+        },
         "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
             "type": "string",
             "defaultValue": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\fhvhv"
@@ -42,6 +46,14 @@
         "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
             "type": "string",
             "defaultValue": "adf_reader"
+        },
+        "LS_SRC_LOCAL_SIM_properties_typeProperties_host": {
+            "type": "string",
+            "defaultValue": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\backfill"
+        },
+        "LS_SRC_LOCAL_SIM_properties_typeProperties_userId": {
+            "type": "string",
+            "defaultValue": "meet\\win-11"
         },
         "containerUri": {
             "type": "string",
@@ -79,6 +91,9 @@
                     "ls_postgres_rideops_ai_db_password": {
                         "value": "[parameters('ls_postgres_rideops_ai_db_password')]"
                     },
+                    "LS_SRC_LOCAL_SIM_password": {
+                        "value": "[parameters('LS_SRC_LOCAL_SIM_password')]"
+                    },
                     "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
                         "value": "[parameters('LS_SRC_LOCAL_FHVHV_properties_typeProperties_host')]"
                     },
@@ -96,6 +111,12 @@
                     },
                     "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
                         "value": "[parameters('ls_postgres_rideops_ai_db_properties_typeProperties_username')]"
+                    },
+                    "LS_SRC_LOCAL_SIM_properties_typeProperties_host": {
+                        "value": "[parameters('LS_SRC_LOCAL_SIM_properties_typeProperties_host')]"
+                    },
+                    "LS_SRC_LOCAL_SIM_properties_typeProperties_userId": {
+                        "value": "[parameters('LS_SRC_LOCAL_SIM_properties_typeProperties_userId')]"
                     }
                 }
             },

@@ -14,6 +14,9 @@
         "ls_postgres_rideops_ai_db_password": {
             "value": ""
         },
+        "LS_SRC_LOCAL_SIM_password": {
+            "value": ""
+        },
         "LS_SRC_LOCAL_FHVHV_properties_typeProperties_host": {
             "value": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\fhvhv"
         },
@@ -31,6 +34,12 @@
         },
         "ls_postgres_rideops_ai_db_properties_typeProperties_username": {
             "value": "adf_reader"
+        },
+        "LS_SRC_LOCAL_SIM_properties_typeProperties_host": {
+            "value": "C:\\Users\\win-11\\Desktop\\Data Engineering\\RideOps-AI\\data\\backfill"
+        },
+        "LS_SRC_LOCAL_SIM_properties_typeProperties_userId": {
+            "value": "meet\\win-11"
         },
         "containerUri": {
             "value": ""

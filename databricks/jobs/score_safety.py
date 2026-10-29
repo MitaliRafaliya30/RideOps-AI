@@ -20,8 +20,7 @@
 
 # COMMAND ----------
 
-if "dbutils" in globals():
-    dbutils.library.restartPython()      # load the freshly installed LightGBM
+# MAGIC %restart_python
 
 # COMMAND ----------
 
@@ -79,8 +78,14 @@ def alerts_from_scores(scores):
 
 if __name__ == "__main__" and "dbutils" in globals():       # skipped when tests import this file
     mlflow.set_registry_uri("databricks-uc")
-    feature_names = mlflow.models.Model.load(MODEL_URI).signature.inputs.input_names()
-    predict = mlflow.pyfunc.spark_udf(spark, MODEL_URI, result_type=OUTPUT_DDL, env_manager="local")
+    # Resolve the alias to a fixed version first: Spark caches the model package
+    # by URI, so scoring "@champion" could reuse an older version after the alias moved
+    name = MODEL_URI.split(":/")[1].split("@")[0]
+    version = mlflow.MlflowClient().get_model_version_by_alias(name, "champion").version
+    model_uri = f"models:/{name}/{version}"
+    print(f"scoring with {model_uri}")
+    feature_names = mlflow.models.Model.load(model_uri).signature.inputs.input_names()
+    predict = mlflow.pyfunc.spark_udf(spark, model_uri, result_type=OUTPUT_DDL, env_manager="local")
 
     scores = score_windows(spark.read.table(FEATURES_TABLE), predict, feature_names)
     scores.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(SCORES_TABLE)

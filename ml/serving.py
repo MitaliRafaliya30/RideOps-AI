@@ -10,7 +10,8 @@ rolling back is moving the alias back; the job code never changes.
 
 The package is self-contained: the detector files (LightGBM model.txt +
 detector.json), the code it needs (ml/ and the shared utilities/ feature
-module), and pinned requirements. Input: one row per 60 s window with the
+module), and pinned requirements. The wrapper class is stored as a reference
+to ml/pyfunc_model.py, never as bytecode, so it loads on any Python version. Input: one row per 60 s window with the
 model features (all as double); output: risk score, alert, type, reasons.
 
 Databricks needs DATABRICKS_HOST and DATABRICKS_TOKEN (a personal access
@@ -28,32 +29,14 @@ from dotenv import load_dotenv
 from mlflow.models import infer_signature
 
 from geodata.config import REPO_ROOT
-from ml.detector import MODEL_FEATURES, SafetyDetector, matrix
+from ml.detector import SafetyDetector, matrix
+from ml.pyfunc_model import OUTPUT_DDL, SafetyDetectorModel  # noqa: F401  (OUTPUT_DDL re-exported)
 
 logger = logging.getLogger("ml.serving")
 
 LOCAL_MODEL_NAME = "rideops_safety_detector"
 UC_MODEL_NAME = "rideops_ai.ml.rideops_safety_detector"
 ALIAS = "champion"
-
-OUTPUT_DDL = ("risk_score DOUBLE, alert BOOLEAN, alert_source STRING, alert_type STRING, "
-              "reasons STRING, model_version STRING")
-OUTPUT_COLUMNS = [c.split()[0] for c in OUTPUT_DDL.split(", ")]
-
-
-class SafetyDetectorModel(mlflow.pyfunc.PythonModel):
-    """MLflow wrapper: windows in, alerts out."""
-
-    def load_context(self, context):
-        from ml.detector import SafetyDetector as _Detector     # resolved from the model's own code
-        self.detector = _Detector.load(context.artifacts["detector"])
-
-    def predict(self, context, model_input: pd.DataFrame, params=None) -> pd.DataFrame:
-        out = self.detector.alerts(model_input.reset_index(drop=True))
-        out["model_version"] = self.detector.version
-        out["alert_source"] = out["alert_source"].astype(object)
-        return out[OUTPUT_COLUMNS]
-
 
 def _example_input(n_rides: int = 3) -> pd.DataFrame:
     """A few real windows from the local feature cache, as the model expects them (all double)."""
@@ -87,9 +70,9 @@ def publish(target: str, detector_dir=None) -> str:
         name = LOCAL_MODEL_NAME
 
     example = _example_input()
-    output = SafetyDetectorModel()
-    output.detector = detector
-    signature = infer_signature(example, output.predict(None, example))
+    local = SafetyDetectorModel()
+    local.detector = detector
+    signature = infer_signature(example, local.predict(None, example))
 
     with mlflow.start_run(run_name=f"publish {detector.version}"):
         mlflow.log_params({"detector_version": detector.version, "threshold": detector.threshold,
@@ -103,7 +86,7 @@ def publish(target: str, detector_dir=None) -> str:
                                     ("recall", "precision", "false_alarms_per_1k_trips", "median_delay_s")})
         info = mlflow.pyfunc.log_model(
             name="safety_detector",
-            python_model=SafetyDetectorModel(),
+            python_model=SafetyDetectorModel(),        # pickled by reference: see ml/pyfunc_model.py
             artifacts={"detector": str(detector_dir)},
             code_paths=[str(REPO_ROOT / "ml"), str(REPO_ROOT / "databricks" / "utilities")],
             pip_requirements=[f"lightgbm=={lgb.__version__}", "numpy", "pandas"],

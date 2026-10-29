@@ -20,7 +20,8 @@ import pandas as pd
 import pytest
 
 from ml.detector import MODEL_FEATURES, SafetyDetector, matrix
-from ml.serving import OUTPUT_DDL, SafetyDetectorModel
+from ml.pyfunc_model import SafetyDetectorModel
+from ml.serving import OUTPUT_DDL
 
 ROOT = Path(__file__).resolve().parents[1]
 JOB_FILE = ROOT / "databricks" / "jobs" / "score_safety.py"
@@ -88,6 +89,18 @@ def model_uri(tmp_path_factory, windows):
             code_paths=[str(ROOT / "ml"), str(ROOT / "databricks" / "utilities")],
             input_example=matrix(windows).head(2))
     return info.model_uri
+
+
+def test_model_travels_to_another_python_and_os(model_uri):
+    # Two bugs met on Databricks (Linux, Python 3.12) after publishing from Windows / 3.11:
+    #  - a wrapper class pickled BY VALUE carries 3.11 bytecode -> must be pickled by reference
+    #  - "models from code" recorded the file as an absolute C:\ path -> must not be used
+    local = Path(mlflow.artifacts.download_artifacts(model_uri))
+    mlmodel = (local / "MLmodel").read_text()
+    assert "model_code_path" not in mlmodel
+    pickled = next(local.rglob("python_model.pkl")).read_bytes()
+    assert b"ml.pyfunc_model" in pickled and b"_make_skeleton_class" not in pickled
+    assert (local / "code" / "ml" / "pyfunc_model.py").exists()
 
 
 def test_pyfunc_matches_detector(model_uri, windows):

@@ -238,6 +238,20 @@ A live ride counts as ended (`is_final_window`) when its last ping is more than 
 | Silver | Implied speed > 250 km/h (pings at least 2 s apart) | Flag `is_jump` (**not dropped**: it is a safety signal) |
 | Silver | Point outside the NYC bounding box | Flag `is_outside_nyc` |
 | Reconciliation | Pings sent vs landed vs quarantined | Must add up to 100% |
+| Silver | Lakeflow expectations (warn) on `sv_gps_pings`, `sv_ride_live_features`, `sv_safety_labels` | Counted in the pipeline's data quality view, nothing dropped (M9) |
+| Job | `jobs/run_dq_checks.py`, last step after scoring and safety Gold | Appends pass / warn / fail / skipped to `gold.dq_check_results` (M9) |
+
+**DQ checks (`gold.dq_check_results`, one row per check per run, history kept):**
+
+| Category | Check | Warn / fail |
+|---|---|---|
+| Reconciliation | Bronze pings = Silver pings + duplicates + bad timestamps (lost share) | > 0 / > 0.1 % |
+| Reconciliation | Every feature window scored; Gold rides = scored rides | any gap = fail |
+| Validity | Share of GPS jumps / points outside NYC / gaps; GPS quarantine rate | 0.1 % / 1 % (gaps 1 % / 5 %, quarantine 0.5 % / 2 %) |
+| Completeness | Pings without route plan; windows without route features; labelled rides without GPS | 0.1 % / 1 % |
+| Freshness | Minutes since the newest live ping | warn > 60 (live runs on demand here) |
+| Model inputs | PSI drift of 5 key features vs the training week, per source (needs >= 1,000 windows) | 0.1 / 0.25 |
+| Model outputs | Alerted rides per 1k outside the expected 5-50 band (needs >= 200 rides) | any / > 100 per 1k |
 
 ---
 

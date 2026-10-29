@@ -159,6 +159,29 @@ def build_labels(labels_raw):
 
 
 # ----------------------------------------------------------------------------
+# Expectations (M9): WARN only. Violations are counted in the pipeline's data
+# quality view and event log, never dropped: a jump or a ping outside NYC is
+# a safety signal (ADR-011), not garbage. jobs/run_dq_checks.py then turns
+# the same signals into pass/warn/fail with thresholds and keeps the history.
+# ----------------------------------------------------------------------------
+GPS_PING_EXPECTATIONS = {
+    "lat_lon_in_world": "lat BETWEEN -90 AND 90 AND lon BETWEEN -180 AND 180",
+    "inside_nyc": "NOT is_outside_nyc",
+    "has_route_plan": "has_route_plan",
+    "physically_possible_movement": "NOT is_jump",
+}
+WINDOW_EXPECTATIONS = {
+    "window_has_pings": "n_pings > 0",
+    "route_features_present": "dist_off_route_max_m IS NOT NULL",
+    "progress_in_range": "progress_pct_last IS NULL OR progress_pct_last BETWEEN 0 AND 1",
+}
+LABEL_EXPECTATIONS = {
+    "known_incident_type": "incident_type IN ('route_deviation', 'long_stop', 'wrong_dropoff', 'possible_crash', 'gps_spoofing')",
+    "start_before_end": "end_ts IS NULL OR end_ts >= start_ts",
+}
+
+
+# ----------------------------------------------------------------------------
 # Pipeline tables
 # ----------------------------------------------------------------------------
 def _bronze(name):
@@ -181,6 +204,7 @@ def sv_route_plans():
     name=f"{CATALOG}.{SILVER_SCHEMA}.sv_gps_pings",
     comment="Silver: deduplicated GPS pings in event-time order, with per-ping safety features and quality flags"
 )
+@dp.expect_all(GPS_PING_EXPECTATIONS)
 def sv_gps_pings():
     pings = build_pings(_bronze("gps_messages_raw"), _bronze("sim_gps_pings_raw"))
     return add_ping_features(pings, _silver("sv_route_plans"))
@@ -190,6 +214,7 @@ def sv_gps_pings():
     name=f"{CATALOG}.{SILVER_SCHEMA}.sv_ride_live_features",
     comment="Silver: safety features per ride per 60 s window, the input of the safety models"
 )
+@dp.expect_all(WINDOW_EXPECTATIONS)
 def sv_ride_live_features():
     return add_window_features(_silver("sv_gps_pings"))
 
@@ -198,5 +223,6 @@ def sv_ride_live_features():
     name=f"{CATALOG}.{SILVER_SCHEMA}.sv_safety_labels",
     comment="Silver: cleaned safety incident ground truth (training and evaluation only, never used for scoring)"
 )
+@dp.expect_all(LABEL_EXPECTATIONS)
 def sv_safety_labels():
     return build_labels(_bronze("safety_labels_raw"))

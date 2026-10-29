@@ -51,7 +51,8 @@ def spark():
 @pytest.fixture(scope="module")
 def silver():
     sys.modules["pyspark.pipelines"] = types.SimpleNamespace(
-        table=lambda **kw: (lambda fn: fn), view=lambda **kw: (lambda fn: fn), read_stream=lambda name: None)
+        table=lambda **kw: (lambda fn: fn), view=lambda **kw: (lambda fn: fn), read_stream=lambda name: None,
+        expect_all=lambda rules: (lambda fn: fn))
     import pyspark
     pyspark.pipelines = sys.modules["pyspark.pipelines"]
     sys.path.insert(0, str(ROOT / "databricks"))          # pipeline root: utilities/ is importable
@@ -140,3 +141,21 @@ def test_window_table_carries_ride_history_for_scoring(silver, bronze):
     assert first["dist_off_route_max_m_prev"].isna().all() and (first["minutes_into_ride"] == 0).all()
     spoof = wf[wf["ride_id"] == "sim-1"]
     assert spoof["off_route_max_so_far_m"].max() == pytest.approx(spoof["dist_off_route_max_m"].max())
+
+
+def test_expectations_are_valid_sql_on_the_real_columns(silver, bronze):
+    """A typo in an expectation would only show up when the pipeline runs on Databricks."""
+    from pyspark.sql.functions import expr
+    plans = silver.build_route_plans(bronze["live"], bronze["sim_plans"])
+    pings = silver.add_ping_features(silver.build_pings(bronze["live"], bronze["sim_pings"]), plans)
+    windows = silver.add_window_features(pings)
+    for df, rules in [(pings, silver.GPS_PING_EXPECTATIONS), (windows, silver.WINDOW_EXPECTATIONS)]:
+        for name, rule in rules.items():
+            passing = df.where(expr(rule)).count()
+            if name != "physically_possible_movement":          # the spoofed ride jumps on purpose
+                assert passing == df.count(), name
+    labels = silver.build_labels(bronze["live"].sparkSession.createDataFrame(pd.DataFrame([
+        {"incident_id": "i1", "ride_id": "r1", "incident_type": "long_stop", "severity": "high", "params": "{}",
+         "start_ts": "2026-05-06T04:10:00Z", "end_ts": "2026-05-06T04:20:00Z", "_run_id": "run_x"}])))
+    for name, rule in silver.LABEL_EXPECTATIONS.items():
+        assert labels.where(expr(rule)).count() == 1, name

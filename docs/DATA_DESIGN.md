@@ -150,12 +150,14 @@ Storage access: read-only expiring SAS token in secret scope `adls-creds` (Datab
 Azure managed identity). The storage account name is pipeline configuration (`RideOps-Storage-Account`).
 
 ### Silver (schema `silver`)
+Materialized views in `databricks/pipelines/silver/build_gps_silver.py`; `source` = `live` or the backfill run id.
+
 | Table | Grain | Content |
 |---|---|---|
-| `sv_route_plans` | 1 row per ride | Decoded planned route, planned distance and duration |
-| `sv_gps_pings` | 1 row per ping | Deduplicated, ordered; quality flags (`is_jump`, `is_gap`, `is_outside_nyc`) |
-| `sv_ride_live_features` | 1 row per ride per 60 s window | Live features (section 5) |
-| `sv_safety_labels` | 1 row per incident | Cleaned labels |
+| `sv_route_plans` | 1 row per ride | Planned route (encoded polyline), planned distance and duration |
+| `sv_gps_pings` | 1 row per ping | Deduplicated by `message_id`, event-time order, per-ping features and flags (`is_gap`, `is_jump`, `is_outside_nyc`) |
+| `sv_ride_live_features` | 1 row per ride per 60 s window | Model input (section 5) |
+| `sv_safety_labels` | 1 row per incident | Cleaned labels (training and evaluation only) |
 
 ### ML (schema `ml`)
 | Table | Content |
@@ -184,22 +186,30 @@ erDiagram
 
 ---
 
-## 5. Live Features (per ride, 60-second windows)
+## 5. Live Features
 
-| Feature | Meaning |
-|---|---|
-| `dist_off_route_m` (max, mean) | Distance from the planned route |
-| `stationary_s` | Seconds with speed < 2 km/h in the window |
-| `speed_mean_kmh`, `speed_max_kmh` | Speed statistics |
-| `max_decel_kmh_s` | Largest drop in speed between pings |
-| `max_implied_speed_kmh` | Speed implied by consecutive positions (spoofing signal) |
-| `progress_pct` | Share of the planned route completed |
-| `dist_to_dropoff_m` | Straight-line distance to the planned dropoff |
-| `time_vs_plan_ratio` | Elapsed time ÷ planned time so far |
-| `ping_gap_s` | Largest gap between consecutive pings |
-| `hour_of_day`, `is_night` | Context |
+All features come from one file, `databricks/utilities/safety_features.py`, used both for local training and
+inside the Silver pipeline, so training and scoring can never compute a feature differently.
 
----
+**Per ping** (`sv_gps_pings`): `dist_off_route_m` (distance to the planned route), `progress_pct` (share of the
+route driven), `dist_to_dropoff_m`, `time_vs_plan` (elapsed / planned duration), `implied_speed_kmh` (from
+consecutive positions), `decel_kmh_per_s`, `stop_run_s` (seconds standing still so far), `dt_prev_s`.
+
+**Per 60 s window** (`sv_ride_live_features`):
+
+| Feature | Meaning | Main signal for |
+|---|---|---|
+| `dist_off_route_max_m`, `dist_off_route_mean_m` | Distance from the planned route | Route deviation |
+| `stop_run_max_s`, `stationary_share` | Length of the current stop, share of pings standing still | Long stop, crash |
+| `speed_before_stop_kmh` | Speed just before the current stop began | Crash |
+| `speed_mean_kmh`, `speed_max_kmh`, `decel_max_kmh_per_s` | Movement | Crash |
+| `implied_speed_max_kmh`, `n_jumps` | Physically impossible movement | GPS spoofing |
+| `dist_to_dropoff_last_m`, `progress_pct_last`, `is_final_window` | Where the trip ended | Wrong drop-off, crash |
+| `time_vs_plan_last` | Elapsed time vs plan | Detours, long stops |
+| `gap_max_s`, `outside_nyc_share` | Data quality context | Avoiding false alarms |
+| `hour_of_day`, `is_night` | Context | |
+
+A live ride counts as ended (`is_final_window`) when its last ping is more than 60 s older than the newest live ping.
 
 ## 6. Data Quality Rules (GPS)
 

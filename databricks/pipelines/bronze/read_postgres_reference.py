@@ -29,28 +29,33 @@ from pyspark.sql.functions import *
 
 # ----------------------------------------------------------------------------
 # STORAGE AUTHENTICATION
-# Same account-wide SAS token from the earlier ADLS setup, re-registered
-# here against the "rideops" container specifically, since the Hadoop/ABFS
-# auth config key is scoped per-container even when the underlying secret
-# is account-wide.
+# Storage account name comes from the pipeline configuration
+# (RideOps-Storage-Account). Access is a READ-ONLY SAS token (r + l, with an
+# expiry date) in the Databricks secret scope adls-creds, key rideops-adls-sas.
+# The auth settings are applied per storage host, and registered inside the
+# table function so the account name is read at run time, not at import time.
 # ----------------------------------------------------------------------------
-storage_account = "strideopsdev"
 container = "rideops"
 
-sas_token = dbutils.secrets.get(scope="adls-creds", key="nyc-fhvhv-sas")
 
-spark.conf.set(f"fs.azure.account.auth.type.{storage_account}.dfs.core.windows.net", "SAS")
-spark.conf.set(f"fs.azure.sas.token.provider.type.{storage_account}.dfs.core.windows.net",
-                "org.apache.hadoop.fs.azurebfs.sas.FixedSASTokenProvider")
-spark.conf.set(f"fs.azure.sas.fixed.token.{storage_account}.dfs.core.windows.net", sas_token)
+def _configure_adls() -> str:
+    """Register the read-only SAS token for the storage account and return its name."""
+    account = spark.conf.get("RideOps-Storage-Account", "strideopsdev1")
+    host = f"{account}.dfs.core.windows.net"
+    sas_token = dbutils.secrets.get(scope="adls-creds", key="rideops-adls-sas")
+
+    spark.conf.set(f"fs.azure.account.auth.type.{host}", "SAS")
+    spark.conf.set(f"fs.azure.sas.token.provider.type.{host}",
+                   "org.apache.hadoop.fs.azurebfs.sas.FixedSASTokenProvider")
+    spark.conf.set(f"fs.azure.sas.fixed.token.{host}", sas_token)
+    return account
+
 
 # ----------------------------------------------------------------------------
 # METADATA-DRIVEN TABLE LIST
 # This is the control list. Add a table name here and it gets its own
 # Bronze table automatically, no new function to write.
 # ----------------------------------------------------------------------------
-BASE_PATH = f"abfss://{container}@{storage_account}.dfs.core.windows.net/reference/"
-
 REFERENCE_TABLES = [
     "passengers",
     "drivers",
@@ -76,7 +81,8 @@ def _make_bronze_table(table_name: str):
         comment=f"Bronze: raw {table_name} snapshot, landed from PostgreSQL via ADF"
     )
     def _bronze_table():
-        source_path = f"{BASE_PATH}{table_name}/"
+        account = _configure_adls()
+        source_path = f"abfss://{container}@{account}.dfs.core.windows.net/reference/{table_name}/"
 
         return (
             spark.read.format("parquet").load(source_path)

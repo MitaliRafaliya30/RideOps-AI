@@ -138,10 +138,16 @@ Catalog `rideops_ai`. Existing v1 tables are unchanged.
 ### Bronze (schema `bronze`)
 | Table | Type | Content |
 |---|---|---|
-| `gps_messages_raw` | Streaming | Every valid message from `ride-gps` (plans + pings), with Kafka lineage |
-| `gps_messages_quarantine` | Streaming | Malformed or contract-breaking messages, with a reason |
-| `safety_labels_raw` | Auto Loader | Incident labels from ADLS `labels/safety/` |
-| `zone_geo_raw` | Batch | Zone shapes / centroids |
+| `gps_messages_raw` | Streaming | Every contract-valid message from `ride-gps` (plans + pings), with Kafka lineage |
+| `gps_messages_quarantine` | Streaming | Contract violations with the raw text and a reason: `malformed_json`, `unknown_message_type`, `null_required_field`, `invalid_timestamp`, `out_of_range_value` |
+| `sim_gps_pings_raw` | Auto Loader | GPS pings of simulator backfill runs (training data), `_run_id` per row |
+| `sim_route_plans_raw` | Auto Loader | Route plans of backfill runs |
+| `safety_labels_raw` | Auto Loader | Incident ground truth from ADLS `labels/safety/` (ADR-010) |
+| `safety_behaviors_raw` | Auto Loader | Every simulated behaviour (incidents and normal), for error analysis |
+| `zone_geo_raw` | Batch | Zone centroids (lat/lon) |
+
+Storage access: read-only expiring SAS token in secret scope `adls-creds` (Databricks Free Edition has no
+Azure managed identity). The storage account name is pipeline configuration (`RideOps-Storage-Account`).
 
 ### Silver (schema `silver`)
 | Table | Grain | Content |

@@ -5,6 +5,8 @@
   "configuration": {
     "RideOps-Eventhub-Namespace": "ns-rideops-ai1",
     "RideOps-Eventhub": "ride-events",
+    "RideOps-Eventhub-GPS": "ride-gps",
+    "RideOps-Storage-Account": "strideopsdev1",
     "connection_string": "{{secrets/rideops/eventhub-connection-string}}"
   },
   "libraries": [

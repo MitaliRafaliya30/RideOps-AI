@@ -169,7 +169,8 @@ Materialized views in `databricks/pipelines/silver/build_gps_silver.py`; `source
 | Table | Grain | Content |
 |---|---|---|
 | `dim_incident_type` | 1 row per type | 5 types + `none`, description, severity |
-| `fact_safety_alert` | 1 row per alert | ride, type, risk score, reason codes, detected_at, model version |
+| `safety_window_scores` | 1 row per ride per window | Risk score, alert, alert type, reasons, model version (written by the scoring job, M12) |
+| `fact_safety_alert` | 1 row per ride per alert type | First window that fired: detected_at, risk score, max risk, alert windows, reasons, model version (M12) |
 | `fact_ride_safety` | 1 row per ride | Max risk, alert count, first alert time, final status |
 | `agg_safety_hourly` | zone × hour × type | Alert counts and rates for dashboards |
 | `ml_model_performance` | model version × date | Recall, precision, false alarms / 1,000 trips, detection delay |

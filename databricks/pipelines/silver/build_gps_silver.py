@@ -6,7 +6,8 @@
 #   sv_route_plans          one row per ride: the planned route
 #   sv_gps_pings            one row per ping: deduplicated, ordered by event
 #                           time, per-ping features and quality flags
-#   sv_ride_live_features   one row per ride per 60 s window: the model input
+#   sv_ride_live_features   one row per ride per 60 s window, with ride history:
+#                           the model input (each row scores on its own)
 #   sv_safety_labels        cleaned incident ground truth (training only)
 #
 # Every feature comes from utilities/safety_features.py, the same file used
@@ -32,7 +33,8 @@ from pyspark.sql.window import Window
 
 import utilities.safety_features as safety_features
 from utilities.safety_features import (
-    ENDED_AFTER_S, PING_FEATURES_DDL, WINDOW_FEATURES_DDL, ping_features, window_features,
+    ENDED_AFTER_S, HISTORY_COLUMNS, HISTORY_DDL, PING_FEATURES_DDL, WINDOW_COLUMNS, WINDOW_FEATURES_DDL,
+    history_features, ping_features, window_features,
 )
 
 # The feature functions run inside Spark's Python workers (applyInPandas).
@@ -133,10 +135,14 @@ def add_window_features(ping_feats):
         "ride_ended", when(col("source") == "live", col("ride_ended")).otherwise(lit(True))
     )
 
+    # Ride history (previous minute, worst so far, trend) is added here, per
+    # ride, with the same function training uses: every row of the table is
+    # then a complete model input that can be scored on its own.
     def per_ride(pdf):
-        return window_features(pdf, ride_ended=bool(pdf["ride_ended"].iloc[0]))
+        windows = window_features(pdf, ride_ended=bool(pdf["ride_ended"].iloc[0]))
+        return history_features(windows)[WINDOW_COLUMNS + HISTORY_COLUMNS]
 
-    return with_flag.groupBy("ride_id").applyInPandas(per_ride, WINDOW_FEATURES_DDL)
+    return with_flag.groupBy("ride_id").applyInPandas(per_ride, f"{WINDOW_FEATURES_DDL}, {HISTORY_DDL}")
 
 
 def build_labels(labels_raw):

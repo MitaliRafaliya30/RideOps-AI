@@ -120,7 +120,14 @@ def ride_events_staged():
         "kafka.request.timeout.ms" : 10000,
         "kafka.session.timeout.ms" : 10000,
         "maxOffsetsPerTrigger"     : 10000,
-        "failOnDataLoss"           : "true",
+        # The hub keeps events for 7 days. If the pipeline was not run in that
+        # time, the checkpoint points at events that no longer exist. With
+        # "true" the stream then fails on every run until a full refresh, and a
+        # full refresh would also wipe the Bronze events already stored. In this
+        # dev setup the pipeline runs on demand, so skip the gap (Spark logs it)
+        # and carry on. In production: keep "true", raise retention, and turn on
+        # Event Hubs Capture so nothing is ever lost.
+        "failOnDataLoss"           : "false",
         "startingOffsets"          : "earliest",
     }
 

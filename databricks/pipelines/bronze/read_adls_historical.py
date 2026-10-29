@@ -18,8 +18,8 @@
 #   - Maintains schema information in the configured schema location
 #
 # Authentication:
-#   - SAS token is stored in Databricks Secret Scope
-#   - The SAS token is never hardcoded in this source code
+#   - Read-only SAS token in Databricks secret scope adls-creds (key rideops-adls-sas)
+#   - Never hardcoded in this source code
 # ============================================================================
 
 from pyspark import pipelines as dp
@@ -45,84 +45,36 @@ def fhvhv_trips_raw():
     # ------------------------------------------------------------------------
     # 1. ADLS CONFIGURATION
     # ------------------------------------------------------------------------
-    # Storage account and container containing the ADF-landed files.
+    # The storage account name comes from the pipeline configuration
+    # (RideOps-Storage-Account), so moving to another account is a settings
+    # change, not a code change. Access is a READ-ONLY SAS token (permissions
+    # r + l, with an expiry date) kept in the Databricks secret scope.
+    # Databricks Free Edition has no Azure managed identity; on Azure
+    # Databricks this becomes a Unity Catalog external location.
     # ------------------------------------------------------------------------
 
-    storage_account = "strideopsdev"
+    storage_account = spark.conf.get("RideOps-Storage-Account", "strideopsdev1")
     container = "rideops"
+    host = f"{storage_account}.dfs.core.windows.net"
 
-    # Retrieve the SAS token from the Databricks secret scope.
-    # The actual SAS token is NOT stored in the notebook.
-    sas_token = dbutils.secrets.get(
-        scope="adls-creds",
-        key="nyc-fhvhv-sas"
-    )
+    sas_token = dbutils.secrets.get(scope="adls-creds", key="rideops-adls-sas")
 
-    # ------------------------------------------------------------------------
-    # 2. CONFIGURE ADLS SAS AUTHENTICATION
-    # ------------------------------------------------------------------------
-    # Tell the ABFS driver:
-    #   - authentication method = SAS
-    #   - use FixedSASTokenProvider
-    #   - retrieve the actual SAS token from the secret
-    # ------------------------------------------------------------------------
-
-    spark.conf.set(
-        f"fs.azure.account.auth.type."
-        f"{storage_account}.dfs.core.windows.net",
-        "SAS"
-    )
-
-    spark.conf.set(
-        f"fs.azure.sas.token.provider.type."
-        f"{storage_account}.dfs.core.windows.net",
-        "org.apache.hadoop.fs.azurebfs.sas.FixedSASTokenProvider"
-    )
-
-    spark.conf.set(
-        f"fs.azure.sas.fixed.token."
-        f"{storage_account}.dfs.core.windows.net",
-        sas_token
-    )
+    spark.conf.set(f"fs.azure.account.auth.type.{host}", "SAS")
+    spark.conf.set(f"fs.azure.sas.token.provider.type.{host}",
+                   "org.apache.hadoop.fs.azurebfs.sas.FixedSASTokenProvider")
+    spark.conf.set(f"fs.azure.sas.fixed.token.{host}", sas_token)
 
     # ------------------------------------------------------------------------
-    # 3. SOURCE PATH
+    # 2. SOURCE PATH
     # ------------------------------------------------------------------------
-    # ADF writes the FHVHV parquet files here.
-    #
-    # Azure structure:
-    #
-    # strideopsdev
-    # └── rideops
-    #     └── landing
-    #         └── fhvhv
-    #             ├── fhvhv_tripdata_2026-05.parquet
-    #             ├── ...
-    #             └── future files
-    #
+    # ADF writes the FHVHV parquet files here:
+    #   <account> / rideops / landing / fhvhv / fhvhv_tripdata_2026-05.parquet
     # ------------------------------------------------------------------------
 
-    SOURCE_PATH = (
-        "abfss://rideops@strideopsdev.dfs.core.windows.net/"
-        "landing/fhvhv/"
-    )
+    SOURCE_PATH = f"abfss://{container}@{host}/landing/fhvhv/"
 
     # ------------------------------------------------------------------------
-    # 4. AUTO LOADER SCHEMA LOCATION
-    # ------------------------------------------------------------------------
-    # This is a separate directory used by Auto Loader to maintain
-    # schema information discovered from the source files.
-    #
-    # It is deliberately NOT the same as the source data directory.
-    # ------------------------------------------------------------------------
-
-    SCHEMA_LOCATION = (
-        "abfss://rideops@strideopsdev.dfs.core.windows.net/"
-        "_schemas/fhvhv/"
-    )
-
-    # ------------------------------------------------------------------------
-    # 5. READ USING AUTO LOADER
+    # 3. READ USING AUTO LOADER
     # ------------------------------------------------------------------------
 
     df = (
@@ -135,11 +87,8 @@ def fhvhv_trips_raw():
             "parquet"
         )
 
-        # Auto Loader schema metadata/state location
-        .option(
-            "cloudFiles.schemaLocation",
-            SCHEMA_LOCATION
-        )
+        # No schemaLocation option: Lakeflow manages Auto Loader schema state
+        # itself, so the read-only token never needs write access.
 
         # Allow newly discovered columns to be added to the schema
         .option(
@@ -151,7 +100,7 @@ def fhvhv_trips_raw():
     )
 
     # ------------------------------------------------------------------------
-    # 6. BRONZE METADATA + LINEAGE
+    # 4. BRONZE METADATA + LINEAGE
     # ------------------------------------------------------------------------
     # _metadata is provided by Auto Loader for file-level lineage.
     #
@@ -183,7 +132,7 @@ def fhvhv_trips_raw():
     )
 
     # ------------------------------------------------------------------------
-    # 7. RETURN BRONZE DATASET
+    # 5. RETURN BRONZE DATASET
     # ------------------------------------------------------------------------
 
     return df

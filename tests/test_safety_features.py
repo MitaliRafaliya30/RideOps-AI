@@ -68,7 +68,8 @@ def test_distance_to_route_and_progress():
 def test_normal_trip_stays_on_route_and_finishes(grid_router, calibration):
     pf, wf, _ = features(grid_router, calibration)
     assert list(pf.columns) == PING_COLUMNS and list(wf.columns) == WINDOW_COLUMNS
-    assert pf["dist_off_route_m"].max() < 5
+    assert pf["dist_off_route_m"].max() < 5 and pf["off_route_run_s"].max() == 0
+    assert pf["away_from_dropoff_m"].max() < 300                 # closes in on the destination (grid detours aside)
     assert not pf["is_jump"].any() and pf["stop_run_s"].max() == 0
     assert pf["progress_pct"].iloc[-1] == pytest.approx(1.0, abs=0.01)
     assert pf["dist_to_dropoff_m"].iloc[-1] < 5
@@ -99,6 +100,20 @@ def test_route_deviation_moves_far_from_route(grid_router, calibration):
     pf, wf, _ = features(grid_router, calibration, "route_deviation")
     assert pf["dist_off_route_m"].max() > 400
     assert wf["dist_off_route_max_m"].max() > 400
+    assert wf["off_route_run_max_s"].max() >= 60                 # stays off route, not a single noisy ping
+    assert wf["away_from_dropoff_max_m"].max() > 200             # drives away from the destination
+
+
+def test_pings_milliseconds_apart_give_no_impossible_speed(grid_router, calibration):
+    # Found in EDA: the last ping of 1 % of rides came 0.001-0.3 s after the
+    # previous one; 4 m of GPS noise over 0.05 s read as 600+ km/h "spoofing"
+    pings, plan, _ = ride(grid_router, calibration, noise_m=4.0)
+    extra = pings.iloc[[-1]].assign(
+        message_id="late-copy", seq_no=pings["seq_no"].max() + 1, lat=pings["lat"].iloc[-1] + 8 / 111_320,
+        ping_ts=(pd.to_datetime(pings["ping_ts"].iloc[-1]) + pd.Timedelta(milliseconds=50)).isoformat())
+    pf = ping_features(pd.concat([pings, extra], ignore_index=True), plan)
+    assert not pf["is_jump"].any()
+    assert np.isnan(pf["implied_speed_kmh"].iloc[-1]) and np.isnan(pf["decel_kmh_per_s"].iloc[-1])
 
 
 def test_long_stop_builds_a_long_stop_run(grid_router, calibration):

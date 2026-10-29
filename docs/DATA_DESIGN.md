@@ -192,14 +192,18 @@ All features come from one file, `databricks/utilities/safety_features.py`, used
 inside the Silver pipeline, so training and scoring can never compute a feature differently.
 
 **Per ping** (`sv_gps_pings`): `dist_off_route_m` (distance to the planned route), `progress_pct` (share of the
-route driven), `dist_to_dropoff_m`, `time_vs_plan` (elapsed / planned duration), `implied_speed_kmh` (from
-consecutive positions), `decel_kmh_per_s`, `stop_run_s` (seconds standing still so far), `dt_prev_s`.
+route driven), `dist_to_dropoff_m`, `away_from_dropoff_m` (distance gone back from the closest point to the
+destination so far), `time_vs_plan` (elapsed / planned duration), `implied_speed_kmh` (from consecutive positions;
+not computed for pings under 2 s apart, where GPS noise reads as hundreds of km/h), `decel_kmh_per_s`, `stop_run_s`
+(seconds standing still so far), `off_route_run_s` (seconds more than 100 m off route so far), `dt_prev_s`.
 
 **Per 60 s window** (`sv_ride_live_features`):
 
 | Feature | Meaning | Main signal for |
 |---|---|---|
 | `dist_off_route_max_m`, `dist_off_route_mean_m` | Distance from the planned route | Route deviation |
+| `off_route_run_max_s` | How long the car has stayed off route (> 100 m) | Route deviation vs innocent detour |
+| `away_from_dropoff_max_m` | Moving away from the destination (vs re-routing towards it) | Route deviation vs re-routing |
 | `stop_run_max_s`, `stationary_share` | Length of the current stop, share of pings standing still | Long stop, crash |
 | `speed_before_stop_kmh` | Speed just before the current stop began | Crash |
 | `speed_mean_kmh`, `speed_max_kmh`, `decel_max_kmh_per_s` | Movement | Crash |
@@ -211,6 +215,9 @@ consecutive positions), `decel_kmh_per_s`, `stop_run_s` (seconds standing still 
 
 A live ride counts as ended (`is_final_window`) when its last ping is more than 60 s older than the newest live ping.
 
+`off_route_run_max_s`, `away_from_dropoff_max_m` and the 2 s minimum for implied speed came out of the M10 EDA
+(`notebooks/10_safety_eda.ipynb`, findings in `docs/EDA_FINDINGS.md`).
+
 ## 6. Data Quality Rules (GPS)
 
 | Layer | Rule | Action |
@@ -219,7 +226,7 @@ A live ride counts as ended (`is_final_window`) when its last ping is more than 
 | Silver | Duplicate `message_id` | Drop (within watermark) |
 | Silver | Out-of-order `seq_no` | Reorder by `ping_ts` |
 | Silver | Gap > 30 s between pings | Flag `is_gap` |
-| Silver | Implied speed > 250 km/h | Flag `is_jump` (**not dropped**: it is a safety signal) |
+| Silver | Implied speed > 250 km/h (pings at least 2 s apart) | Flag `is_jump` (**not dropped**: it is a safety signal) |
 | Silver | Point outside the NYC bounding box | Flag `is_outside_nyc` |
 | Reconciliation | Pings sent vs landed vs quarantined | Must add up to 100% |
 

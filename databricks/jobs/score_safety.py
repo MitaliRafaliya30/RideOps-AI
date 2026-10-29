@@ -78,7 +78,8 @@ def alerts_from_scores(scores):
 # COMMAND ----------
 
 if __name__ == "__main__" and "dbutils" in globals():       # skipped when tests import this file
-    feature_names = mlflow.models.get_model_info(MODEL_URI).signature.inputs.input_names()
+    mlflow.set_registry_uri("databricks-uc")
+    feature_names = mlflow.models.Model.load(MODEL_URI).signature.inputs.input_names()
     predict = mlflow.pyfunc.spark_udf(spark, MODEL_URI, result_type=OUTPUT_DDL, env_manager="local")
 
     scores = score_windows(spark.read.table(FEATURES_TABLE), predict, feature_names)

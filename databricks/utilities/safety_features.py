@@ -312,10 +312,12 @@ def window_features(pf: pd.DataFrame, ride_ended: bool) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Ride history (model input on top of the current window)
 # ---------------------------------------------------------------------------
-HISTORY_COLUMNS = [
-    "dist_off_route_max_m_prev", "away_from_dropoff_max_m_prev", "stop_run_max_s_prev", "time_vs_plan_last_prev",
-    "off_route_max_so_far_m", "away_max_so_far_m", "off_route_growth_m", "stationary_share_3w", "minutes_into_ride",
-]
+HISTORY_DDL = (
+    "dist_off_route_max_m_prev DOUBLE, away_from_dropoff_max_m_prev DOUBLE, stop_run_max_s_prev DOUBLE, "
+    "time_vs_plan_last_prev DOUBLE, off_route_max_so_far_m DOUBLE, away_max_so_far_m DOUBLE, "
+    "off_route_growth_m DOUBLE, stationary_share_3w DOUBLE, minutes_into_ride INT"
+)
+HISTORY_COLUMNS = [c.split()[0] for c in HISTORY_DDL.split(", ")]
 
 
 def history_features(wf: pd.DataFrame) -> pd.DataFrame:
@@ -326,6 +328,8 @@ def history_features(wf: pd.DataFrame) -> pd.DataFrame:
     the same values it will have in training. One window alone cannot tell a
     deviation that keeps growing from a detour that is already turning back.
     """
+    if wf.empty:
+        return wf.assign(**{c: pd.Series(dtype=float) for c in HISTORY_COLUMNS})
     out = wf.sort_values(["ride_id", "window_index"]).copy()
     by_ride = out.groupby("ride_id", sort=False)
     for column in ("dist_off_route_max_m", "away_from_dropoff_max_m", "stop_run_max_s", "time_vs_plan_last"):

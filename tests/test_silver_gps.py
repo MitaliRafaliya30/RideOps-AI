@@ -128,3 +128,15 @@ def test_labels_clean_and_deduplicated(spark, silver):
     labels = silver.build_labels(raw).toPandas()
     assert len(labels) == 1 and labels.loc[0, "source"] == "run_x"
     assert labels.loc[0, "start_ts"] == pd.Timestamp("2026-05-06 04:10:00")
+
+
+def test_window_table_carries_ride_history_for_scoring(silver, bronze):
+    from utilities.safety_features import HISTORY_COLUMNS
+    plans = silver.build_route_plans(bronze["live"], bronze["sim_plans"])
+    pings = silver.build_pings(bronze["live"], bronze["sim_pings"])
+    wf = silver.add_window_features(silver.add_ping_features(pings, plans)).toPandas()
+    assert set(HISTORY_COLUMNS) <= set(wf.columns)
+    first = wf.sort_values("window_index").groupby("ride_id").head(1)
+    assert first["dist_off_route_max_m_prev"].isna().all() and (first["minutes_into_ride"] == 0).all()
+    spoof = wf[wf["ride_id"] == "sim-1"]
+    assert spoof["off_route_max_so_far_m"].max() == pytest.approx(spoof["dist_off_route_max_m"].max())

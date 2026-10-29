@@ -34,7 +34,7 @@ def rule_flags(w: pd.DataFrame, t: dict = None) -> pd.DataFrame:
         "unexpected_stop": w["stop_run_max_s"] > t["stop_s"],
         "gps_spoofing":    w["implied_speed_max_kmh"].fillna(0) > t["jump_kmh"],
         "route_deviation": w["dist_off_route_max_m"].fillna(0) > t["off_route_m"],
-        "wrong_dropoff":   w["is_final_window"] & (w["dist_to_dropoff_last_m"].fillna(0) > t["dropoff_miss_m"]),
+        "wrong_dropoff":   w["is_final_window"].astype(bool) & (w["dist_to_dropoff_last_m"].fillna(0) > t["dropoff_miss_m"]),
     }, index=w.index)
 
 

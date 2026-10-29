@@ -12,7 +12,8 @@ comparison is at equal operational cost, not at each model's best case.
 
 Final verdict on the holdout week (a second simulator run, different seed,
 the following week), never touched during development, with bootstrap
-confidence intervals. Everything is logged to MLflow.
+confidence intervals. Everything is logged to MLflow; `python -m ml.serving`
+then packages the saved detector and registers it.
 
   python -m ml.train
   python -m ml.train --holdout run_2026-05-11_7d_50000r_seed7
@@ -20,7 +21,6 @@ confidence intervals. Everything is logged to MLflow.
 """
 
 import argparse
-import json
 import logging
 
 import lightgbm as lgb
@@ -41,7 +41,7 @@ logger = logging.getLogger("ml.train")
 TRACKING_URI = f"sqlite:///{(REPO_ROOT / 'mlflow.db').as_posix()}"
 EXPERIMENT = "rideops-rider-safety"
 MODEL_DIR = REPO_ROOT / "models"
-DETECTOR_PATH = MODEL_DIR / "safety_detector.joblib"
+DETECTOR_PATH = MODEL_DIR / "safety_detector"            # model.txt + detector.json
 HOLDOUT_RUN = "run_2026-05-11_7d_50000r_seed7"
 
 LGBM_BASE = dict(objective="binary", metric="average_precision", n_estimators=3000, learning_rate=0.05,
@@ -81,7 +81,7 @@ def deterministic(windows) -> pd.Series:
     return rule_flags(windows)[DETERMINISTIC_RULES].any(axis=1)
 
 
-def train(holdout_run: str = HOLDOUT_RUN, register: bool = True):
+def train(holdout_run: str = HOLDOUT_RUN):
     windows, labels, _ = load_windows()
     split = windows["split"]
     train_w = windows[(split == "train") & ~windows["after_incident"]]   # ambiguous after-incident windows left out
@@ -122,7 +122,7 @@ def train(holdout_run: str = HOLDOUT_RUN, register: bool = True):
         mlflow.log_metrics({"threshold_lgbm": threshold_lgbm, "threshold_hybrid": threshold_hybrid,
                             "threshold_iso": threshold_iso})
 
-        detector = SafetyDetector(model=model, threshold=threshold_hybrid, version=parent.info.run_id[:8],
+        detector = SafetyDetector(booster=model.booster_, threshold=threshold_hybrid, version=parent.info.run_id[:8],
                                   metadata={"params": params, "budget_false_alarms_per_1k": budget,
                                             "valid_pr_auc": pr_auc, "trained_on": "run_2026-05-04 days 1-5"})
 
@@ -159,13 +159,9 @@ def train(holdout_run: str = HOLDOUT_RUN, register: bool = True):
         mlflow.log_artifact(str(MODEL_DIR / "comparison.csv"))
 
         detector.save(DETECTOR_PATH)
-        mlflow.log_artifact(str(DETECTOR_PATH))
-        (MODEL_DIR / "detector_card.json").write_text(json.dumps(
-            {"version": detector.version, "threshold": detector.threshold, "features": detector.features,
-             **detector.metadata}, indent=2, default=str))
-        mlflow.lightgbm.log_model(model, name="lightgbm",
-                                  registered_model_name="rideops_safety_detector" if register else None,
-                                  input_example=matrix(valid_w.head(5)))
+        mlflow.log_artifacts(str(DETECTOR_PATH), artifact_path="safety_detector")
+        # Logged for lineage only; the registry gets the packaged detector (python -m ml.serving)
+        mlflow.lightgbm.log_model(model, name="lightgbm", input_example=matrix(valid_w.head(5)))
         logger.info("results:\n%s", results.set_index(["set", "detector"])
                     [["recall", "precision", "false_alarms_per_1k_trips", "median_delay_s"]].round(3))
     return detector, results
@@ -174,10 +170,9 @@ def train(holdout_run: str = HOLDOUT_RUN, register: bool = True):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--holdout", default=HOLDOUT_RUN)
-    parser.add_argument("--no-register", action="store_true")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    train(args.holdout, register=not args.no_register)
+    train(args.holdout)
 
 
 if __name__ == "__main__":

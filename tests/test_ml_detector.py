@@ -30,7 +30,7 @@ def data():
 def detector(data):
     model = lgb.LGBMClassifier(n_estimators=60, num_leaves=7, verbose=-1, random_state=0)
     model.fit(matrix(data), data["is_incident"].astype(int))
-    return SafetyDetector(model=model, threshold=0.5)
+    return SafetyDetector(booster=model.booster_, threshold=0.5)
 
 
 def test_model_alerts_on_the_dangerous_signal_with_reasons(detector, data):
@@ -52,7 +52,7 @@ def test_deterministic_rules_alert_even_when_the_model_is_calm(detector, data):
 
 
 def test_save_and_load_give_identical_scores(detector, data, tmp_path):
-    path = tmp_path / "detector.joblib"
+    path = tmp_path / "detector"
     detector.save(path)
     loaded = SafetyDetector.load(path)
     assert np.allclose(loaded.risk(data), detector.risk(data))

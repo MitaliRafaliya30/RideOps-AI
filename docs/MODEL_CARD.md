@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Name** | `rideops_safety_detector` (MLflow registry, version 1) |
+| **Name** | `rideops_ai.ml.rideops_safety_detector@champion` (Unity Catalog); locally `rideops_safety_detector@champion` |
 | **Type** | Hybrid: deterministic rules + LightGBM binary classifier |
 | **Task** | Flag a trip in progress that needs a safety check, every 60 seconds, from GPS only |
 | **Code** | `ml/detector.py` (detector), `ml/train.py` (training), `notebooks/11_safety_models.ipynb` (analysis) |
-| **Status** | Trained and evaluated offline; live scoring in M12 |
+| **Status** | Packaged with `python -m ml.serving`; scored on Databricks by `databricks/jobs/score_safety.py` (M12) |
 
 ---
 

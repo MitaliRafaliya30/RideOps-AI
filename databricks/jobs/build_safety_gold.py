@@ -21,6 +21,12 @@ from pyspark.sql import Window
 from pyspark.sql import functions as F
 
 CATALOG = "rideops_ai"
+
+
+def ratio(numerator, denominator):
+    """Division that gives NULL instead of failing on 0 (Databricks runs Spark in ANSI mode)."""
+    return F.try_divide(numerator.cast("double"), denominator.cast("double"))
+
 GOLD, SILVER, BRONZE = f"{CATALOG}.gold", f"{CATALOG}.silver", f"{CATALOG}.bronze"
 
 # The week the model was trained on: its scores there are optimistic, and labelled as such
@@ -168,7 +174,7 @@ def agg_safety_hourly(ride_safety, alerts):
     out = rides.join(by_type, [rides[k].eqNullSafe(by_type[f"_{k}"]) for k in keys], "left").drop(*[f"_{k}" for k in keys])
     for t in INCIDENT_TYPES:
         out = out.withColumn(t[0], F.coalesce(F.col(t[0]), F.lit(0))).withColumnRenamed(t[0], f"alerts_{t[0]}")
-    return out.withColumn("alerted_rides_per_1k", 1000 * F.col("alerted_rides") / F.col("rides_tracked"))
+    return out.withColumn("alerted_rides_per_1k", 1000 * ratio(F.col("alerted_rides"), F.col("rides_tracked")))
 
 
 def ml_model_performance(ride_safety):
@@ -188,12 +194,12 @@ def ml_model_performance(ride_safety):
             F.percentile_approx(F.when(F.col("outcome") == "caught", F.col("detection_delay_s")), 0.5)
             .alias("median_detection_delay_s"),
         )
-        .withColumn("alerted_rides_per_1k", 1000 * F.col("alerted_rides") / F.col("rides"))
-        .withColumn("recall", F.when(F.col("has_ground_truth"), F.col("caught") / F.col("incidents")))
-        .withColumn("false_alarms_per_1k", F.when(F.col("has_ground_truth"), 1000 * F.col("false_alarm_rides") / F.col("rides")))
+        .withColumn("alerted_rides_per_1k", 1000 * ratio(F.col("alerted_rides"), F.col("rides")))
+        .withColumn("recall", F.when(F.col("has_ground_truth"), ratio(F.col("caught"), F.col("incidents"))))
+        .withColumn("false_alarms_per_1k", F.when(F.col("has_ground_truth"), 1000 * ratio(F.col("false_alarm_rides"), F.col("rides"))))
         # share of alerted rides whose incident was caught (same definition as ml/metrics.py)
         .withColumn("precision", F.when(F.col("has_ground_truth") & (F.col("alerted_rides") > 0),
-                                        F.col("caught") / F.col("alerted_rides")))
+                                        ratio(F.col("caught"), F.col("alerted_rides"))))
     )
 
 # COMMAND ----------
@@ -218,6 +224,7 @@ if __name__ == "__main__" and "dbutils" in globals():       # skipped when tests
     display(spark.read.table(f"{GOLD}.ml_model_performance")
             .groupBy("model_version", "source", "data_role")
             .agg(F.sum("rides").alias("rides"), F.sum("incidents").alias("incidents"), F.sum("caught").alias("caught"),
-                 F.sum("false_alarm_rides").alias("false_alarm_rides"))
-            .withColumn("recall", F.col("caught") / F.col("incidents"))
-            .withColumn("false_alarms_per_1k", 1000 * F.col("false_alarm_rides") / F.col("rides")))
+                 F.sum("false_alarm_rides").alias("false_alarm_rides"), F.max("has_ground_truth").alias("truth"))
+            .withColumn("recall", F.when(F.col("truth"), ratio(F.col("caught"), F.col("incidents"))))
+            .withColumn("false_alarms_per_1k", F.when(F.col("truth"), 1000 * ratio(F.col("false_alarm_rides"), F.col("rides"))))
+            .drop("truth"))

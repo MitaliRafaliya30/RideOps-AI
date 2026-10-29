@@ -166,3 +166,28 @@ def test_spark_style_naive_timestamps_give_same_result(grid_router, calibration)
     a = ping_features(pings, plan)["time_vs_plan"]
     b = ping_features(naive, naive_plan)["time_vs_plan"]
     assert np.allclose(a, b)
+
+
+# ---------------- ride history ----------------
+
+def test_history_uses_only_past_windows(grid_router, calibration):
+    from utilities.safety_features import HISTORY_COLUMNS, history_features
+    _, wf, _ = features(grid_router, calibration, "route_deviation")
+    full = history_features(wf)
+    assert set(HISTORY_COLUMNS) <= set(full.columns)
+    assert np.isnan(full["dist_off_route_max_m_prev"].iloc[0])
+    assert (full["off_route_max_so_far_m"].diff().dropna() >= 0).all()
+    # a live ride seen only up to minute k gets exactly the values it has in the full ride (no look-ahead)
+    k = len(wf) // 2
+    partial = history_features(wf[wf["window_index"] < k])
+    pd.testing.assert_frame_equal(partial[HISTORY_COLUMNS].reset_index(drop=True),
+                                  full[HISTORY_COLUMNS].iloc[:k].reset_index(drop=True))
+
+
+def test_history_keeps_rides_apart(grid_router, calibration):
+    from utilities.safety_features import history_features
+    _, a, _ = features(grid_router, calibration, "route_deviation")
+    _, b, _ = features(grid_router, calibration, seed=5)
+    both = history_features(pd.concat([a, b.assign(ride_id="ride-2")], ignore_index=True))
+    first_of_b = both[both["ride_id"] == "ride-2"].iloc[0]
+    assert np.isnan(first_of_b["dist_off_route_max_m_prev"]) and first_of_b["off_route_max_so_far_m"] < 20

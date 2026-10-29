@@ -9,7 +9,9 @@ import pandas as pd
 import pytest
 
 from ml.labels import label_windows, split_of
-from ml.metrics import evaluate
+import numpy as np
+
+from ml.metrics import evaluate, pick_threshold, threshold_curve
 
 T0 = pd.Timestamp("2026-05-06 04:00")
 
@@ -101,3 +103,46 @@ def test_metrics_recall_delay_and_false_alarms(windows, labels):
     assert result["false_alarms_per_1k_trips"] == pytest.approx(250)                    # 1 of 4 trips
     assert result["precision"] == pytest.approx(0.5)
     assert pd.isna(result["by_type"].loc["gps_spoofing", "recall"])                     # no such incident
+
+
+def test_threshold_curve_matches_evaluate_at_every_threshold(windows, labels):
+    rng = np.random.default_rng(3)
+    score = pd.Series(rng.random(len(windows)), index=windows.index)
+    forced = pd.Series(False, index=windows.index)
+    forced.iloc[[2, 20]] = True                                    # deterministic rule alerts
+    thresholds = np.linspace(0, 1, 21)
+    curve = threshold_curve(windows, score, labels, thresholds, forced=forced)
+    for t, row in zip(thresholds, curve.itertuples()):
+        direct = evaluate(windows.assign(alert=(score > t) | forced), labels)
+        assert row.recall == pytest.approx(direct["recall"])
+        assert row.false_alarms_per_1k_trips == pytest.approx(direct["false_alarms_per_1k_trips"])
+
+
+def test_pick_threshold_respects_budget_and_prefers_earlier_alerts():
+    curve = pd.DataFrame({"threshold": [0.1, 0.2, 0.3, 0.4], "recall": [1.0, 0.9, 0.9, 0.5],
+                          "false_alarms_per_1k_trips": [5.0, 1.0, 0.5, 0.0]})
+    assert pick_threshold(curve, 1.0) == 0.2
+    assert pick_threshold(curve, 0.0) == 0.4
+
+
+def test_bootstrap_point_estimate_matches_evaluate_and_brackets_it(windows, labels):
+    from ml.metrics import bootstrap_ci
+    w = windows.assign(alert=False)
+    w.loc[(w["ride_id"] == "stop") & (w["window_index"] == 4), "alert"] = True
+    w.loc[(w["ride_id"] == "crash") & (w["window_index"] == 5), "alert"] = True
+    w.loc[(w["ride_id"] == "ok") & (w["window_index"] == 2), "alert"] = True
+    ci = bootstrap_ci(w, labels, n_boot=300)
+    direct = evaluate(w, labels)
+    for metric in ("recall", "false_alarms_per_1k_trips", "median_delay_s"):
+        assert ci.loc[metric, "value"] == pytest.approx(direct[metric])
+        assert ci.loc[metric, "ci_low"] <= ci.loc[metric, "value"] <= ci.loc[metric, "ci_high"]
+
+
+def test_paired_bootstrap_sees_a_real_difference_and_none_against_itself(windows, labels):
+    from ml.metrics import paired_bootstrap
+    nothing = pd.Series(False, index=windows.index)
+    everything_in_incidents = windows["is_incident"]
+    diff = paired_bootstrap(windows, nothing, everything_in_incidents, labels, n_boot=300)
+    assert diff.loc["recall", "difference"] == pytest.approx(1.0)
+    same = paired_bootstrap(windows, everything_in_incidents, everything_in_incidents, labels, n_boot=100)
+    assert (same["difference"].fillna(0) == 0).all() and not same["significant"].any()

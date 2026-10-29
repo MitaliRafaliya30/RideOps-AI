@@ -163,7 +163,7 @@ Materialized views in `databricks/pipelines/silver/build_gps_silver.py`; `source
 | Table | Content |
 |---|---|
 | `ml.training_windows` | Features joined with labels (window overlaps an incident = positive) |
-| MLflow registry | `rideops_safety_unsupervised`, `rideops_safety_supervised` |
+| MLflow registry | `rideops_safety_detector`: hybrid rules + LightGBM (M11, see `docs/MODEL_CARD.md`) |
 
 ### Gold (schema `gold`)
 | Table | Grain | Content |

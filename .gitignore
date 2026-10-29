@@ -48,3 +48,9 @@ output/*
 # OS
 .DS_Store
 Thumbs.db
+
+# MLflow tracking store and trained models (rebuild with python -m ml.train)
+mlflow.db
+mlruns/
+mlartifacts/
+models/

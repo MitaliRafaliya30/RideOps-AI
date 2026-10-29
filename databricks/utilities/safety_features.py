@@ -307,3 +307,33 @@ def window_features(pf: pd.DataFrame, ride_ended: bool) -> pd.DataFrame:
     for column in ("n_pings", "window_index", "n_jumps"):
         out[column] = out[column].astype("int32")
     return out[WINDOW_COLUMNS]
+
+
+# ---------------------------------------------------------------------------
+# Ride history (model input on top of the current window)
+# ---------------------------------------------------------------------------
+HISTORY_COLUMNS = [
+    "dist_off_route_max_m_prev", "away_from_dropoff_max_m_prev", "stop_run_max_s_prev", "time_vs_plan_last_prev",
+    "off_route_max_so_far_m", "away_max_so_far_m", "off_route_growth_m", "stationary_share_3w", "minutes_into_ride",
+]
+
+
+def history_features(wf: pd.DataFrame) -> pd.DataFrame:
+    """
+    wf: window_features() rows of one or many rides.
+    Adds what the ride did BEFORE this window: the previous window, the worst
+    so far, and the trend. Only past windows are used, so a live window gets
+    the same values it will have in training. One window alone cannot tell a
+    deviation that keeps growing from a detour that is already turning back.
+    """
+    out = wf.sort_values(["ride_id", "window_index"]).copy()
+    by_ride = out.groupby("ride_id", sort=False)
+    for column in ("dist_off_route_max_m", "away_from_dropoff_max_m", "stop_run_max_s", "time_vs_plan_last"):
+        out[f"{column}_prev"] = by_ride[column].shift(1)
+    out["off_route_max_so_far_m"] = by_ride["dist_off_route_max_m"].cummax()
+    out["away_max_so_far_m"] = by_ride["away_from_dropoff_max_m"].cummax()
+    out["off_route_growth_m"] = out["dist_off_route_max_m"] - out["dist_off_route_max_m_prev"]
+    out["stationary_share_3w"] = (by_ride["stationary_share"].rolling(3, min_periods=1).mean()
+                                  .reset_index(level=0, drop=True))
+    out["minutes_into_ride"] = out["window_index"].astype("int32")
+    return out

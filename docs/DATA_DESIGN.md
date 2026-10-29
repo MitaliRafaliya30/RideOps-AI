@@ -166,14 +166,22 @@ Materialized views in `databricks/pipelines/silver/build_gps_silver.py`; `source
 | MLflow registry | `rideops_safety_detector`: hybrid rules + LightGBM (M11, see `docs/MODEL_CARD.md`) |
 
 ### Gold (schema `gold`)
+
+Safety tables are written by two job notebooks that run right after the pipeline
+(pipeline -> `jobs/score_safety` -> `jobs/build_safety_gold`), so they always reflect the latest scores.
+
 | Table | Grain | Content |
 |---|---|---|
-| `dim_incident_type` | 1 row per type | 5 types + `none`, description, severity |
-| `safety_window_scores` | 1 row per ride per window | Risk score, alert, alert type, reasons, model version (written by the scoring job, M12) |
+| `safety_window_scores` | 1 row per ride per window | Risk score, alert, alert type, reasons, model version (M12) |
 | `fact_safety_alert` | 1 row per ride per alert type | First window that fired: detected_at, risk score, max risk, alert windows, reasons, model version (M12) |
-| `fact_ride_safety` | 1 row per ride | Max risk, alert count, first alert time, final status |
-| `agg_safety_hourly` | zone × hour × type | Alert counts and rates for dashboards |
-| `ml_model_performance` | model version × date | Recall, precision, false alarms / 1,000 trips, detection delay |
+| `dim_incident_type` | 1 row per alert type | Name, description, severity, detected by (rule / model), ground-truth types, recommended action, response target (M8) |
+| `fact_ride_safety` | 1 row per tracked ride | Pickup zone (nearest TLC centroid), max risk, alert count and types, first alert, minutes to first alert; vs ground truth: outcome (caught / missed / false_alarm / clean), false_alarm flag, detection delay; data role (training data, unseen simulation, live) (M8) |
+| `agg_safety_hourly` | zone x date x hour x source | Rides tracked, alerted rides, alerts per type, alerted rides per 1k, average max risk (M8) |
+| `ml_model_performance` | model version x date x source | Daily monitoring: alert rate and average risk always; recall, false alarms per 1k, precision, median detection delay only where ground truth exists (M8) |
+
+Live rides never get recall: nobody knows yet which of them were real incidents. Rows from the week the
+model was trained on are marked `training data (optimistic)`. The Spark metrics are tested to equal
+`ml/metrics.py` exactly on real windows, so dashboards and the model card cannot disagree.
 
 ```mermaid
 erDiagram

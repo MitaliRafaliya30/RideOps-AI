@@ -30,16 +30,19 @@ def agg_zone_hourly():
     fact_ride = spark.read.table(f"{CATALOG}.{GOLD_SCHEMA}.fact_ride")
     fact_fhvhv = spark.read.table(f"{CATALOG}.{GOLD_SCHEMA}.fact_fhvhv_trip")
 
+    # All requests in the zone-hour, not only completed ones: cancellation_rate
+    # needs the cancelled rides in its denominator (filtering to completed
+    # first made it always 0). Trip count, wait and revenue stay completed-only.
+    completed = col("final_status") == "completed"
     world_a = (
         fact_ride
-        .filter(col("final_status") == "completed")
         .withColumn("hour_of_day", hour("requested_at"))
         .groupBy(col("pickup_zone_key").alias("zone_key"), "date_key", "hour_of_day")
         .agg(
-            count("*").alias("trip_count"),
-            avg("wait_time_sec").alias("avg_wait_time_sec"),
+            sum(when(completed, 1).otherwise(0)).alias("trip_count"),
+            avg(when(completed, col("wait_time_sec"))).alias("avg_wait_time_sec"),
             (sum(when(col("final_status") == "cancelled", 1).otherwise(0)) / count("*")).alias("cancellation_rate"),
-            sum("total_fare").alias("total_revenue"),
+            sum(when(completed, col("total_fare"))).alias("total_revenue"),
         )
         .withColumn("source", lit("operational"))
     )

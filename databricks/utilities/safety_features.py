@@ -28,6 +28,8 @@ EARTH_RADIUS_M = 6_371_000.0
 STATIONARY_KMH = 2.0      # slower than this counts as standing still
 GAP_S = 30.0              # no ping for longer than this = a gap (pings come every 10 s)
 JUMP_KMH = 250.0          # implied speed above this is physically impossible in a city
+MIN_DT_S = 2.0            # pings closer than this give no speed: 4 m GPS noise over 0.05 s reads as 600 km/h
+OFF_ROUTE_M = 100.0       # further than this from the route counts as off route (GPS noise stays under 20 m)
 WINDOW_S = 60             # model window size
 ENDED_AFTER_S = 60.0      # a ride whose last ping is this much older than the newest data has ended
 NIGHT_HOURS = {22, 23, 0, 1, 2, 3, 4, 5}
@@ -44,16 +46,16 @@ PING_FEATURES_DDL = (
     "lat DOUBLE, lon DOUBLE, speed_kmh DOUBLE, accuracy_m DOUBLE, "
     "planned_at TIMESTAMP, has_route_plan BOOLEAN, elapsed_s DOUBLE, dt_prev_s DOUBLE, "
     "step_m DOUBLE, implied_speed_kmh DOUBLE, decel_kmh_per_s DOUBLE, stop_run_s DOUBLE, "
-    "dist_off_route_m DOUBLE, progress_pct DOUBLE, dist_to_dropoff_m DOUBLE, time_vs_plan DOUBLE, "
-    "is_stationary BOOLEAN, is_gap BOOLEAN, is_jump BOOLEAN, is_outside_nyc BOOLEAN"
+    "dist_off_route_m DOUBLE, off_route_run_s DOUBLE, progress_pct DOUBLE, dist_to_dropoff_m DOUBLE, "
+    "away_from_dropoff_m DOUBLE, time_vs_plan DOUBLE, is_stationary BOOLEAN, is_gap BOOLEAN, is_jump BOOLEAN, is_outside_nyc BOOLEAN"
 )
 
 WINDOW_FEATURES_DDL = (
     "ride_id STRING, source STRING, window_index INT, window_start TIMESTAMP, window_end TIMESTAMP, "
-    "n_pings INT, dist_off_route_max_m DOUBLE, dist_off_route_mean_m DOUBLE, "
+    "n_pings INT, dist_off_route_max_m DOUBLE, dist_off_route_mean_m DOUBLE, off_route_run_max_s DOUBLE, "
     "stop_run_max_s DOUBLE, stationary_share DOUBLE, speed_mean_kmh DOUBLE, speed_max_kmh DOUBLE, "
     "decel_max_kmh_per_s DOUBLE, implied_speed_max_kmh DOUBLE, gap_max_s DOUBLE, n_jumps INT, "
-    "outside_nyc_share DOUBLE, progress_pct_last DOUBLE, dist_to_dropoff_last_m DOUBLE, "
+    "outside_nyc_share DOUBLE, progress_pct_last DOUBLE, dist_to_dropoff_last_m DOUBLE, away_from_dropoff_max_m DOUBLE, "
     "time_vs_plan_last DOUBLE, speed_before_stop_kmh DOUBLE, hour_of_day INT, is_night BOOLEAN, "
     "is_final_window BOOLEAN, has_route_plan BOOLEAN"
 )
@@ -147,11 +149,11 @@ def _naive_utc(values):
     return ts.tz_convert("UTC").tz_localize(None) if ts.tzinfo is not None else ts
 
 
-def _stop_runs(stationary: np.ndarray, dt: np.ndarray) -> np.ndarray:
-    """Seconds the car has been standing still at each ping (0 while moving)."""
-    run = np.zeros(len(stationary))
-    for i in range(1, len(stationary)):
-        if stationary[i] and stationary[i - 1]:
+def _runs(state: np.ndarray, dt: np.ndarray) -> np.ndarray:
+    """Seconds a condition has held without a break at each ping (0 when it does not hold)."""
+    run = np.zeros(len(state))
+    for i in range(1, len(state)):
+        if state[i] and state[i - 1]:
             run[i] = run[i - 1] + dt[i]
     return run
 
@@ -179,8 +181,8 @@ def ping_features(pings: pd.DataFrame, plan: Optional[Dict]) -> pd.DataFrame:
     step = np.full(len(df), np.nan)
     step[1:] = haversine_m(lat[:-1], lon[:-1], lat[1:], lon[1:])
     with np.errstate(divide="ignore", invalid="ignore"):
-        implied = np.where(dt > 0, step / dt * 3.6, np.nan)
-        decel = np.where(dt > 0, (np.roll(speed, 1) - speed) / dt, np.nan)
+        implied = np.where(dt >= MIN_DT_S, step / dt * 3.6, np.nan)
+        decel = np.where(dt >= MIN_DT_S, (np.roll(speed, 1) - speed) / dt, np.nan)
     decel[0] = np.nan
 
     stationary = speed < STATIONARY_KMH
@@ -196,7 +198,7 @@ def ping_features(pings: pd.DataFrame, plan: Optional[Dict]) -> pd.DataFrame:
         "step_m": step,
         "implied_speed_kmh": implied,
         "decel_kmh_per_s": decel,
-        "stop_run_s": _stop_runs(stationary, np.nan_to_num(dt)),
+        "stop_run_s": _runs(stationary, np.nan_to_num(dt)),
         "is_stationary": stationary,
         "is_gap": np.nan_to_num(dt) > GAP_S,
         "is_jump": np.nan_to_num(implied) > JUMP_KMH,
@@ -212,8 +214,16 @@ def ping_features(pings: pd.DataFrame, plan: Optional[Dict]) -> pd.DataFrame:
         out["has_route_plan"] = True
         out["elapsed_s"] = elapsed
         out["dist_off_route_m"] = off
+        # How long the car has stayed off route: an innocent detour rejoins within
+        # minutes, a deviation keeps going (distance alone overlaps between the two)
+        out["off_route_run_s"] = _runs(off > OFF_ROUTE_M, np.nan_to_num(dt))
         out["progress_pct"] = np.clip(along / max(route.length, 1.0), 0.0, 1.0)
-        out["dist_to_dropoff_m"] = haversine_m(lat, lon, plan["dropoff_lat"], plan["dropoff_lon"])
+        to_dropoff = haversine_m(lat, lon, plan["dropoff_lat"], plan["dropoff_lon"])
+        out["dist_to_dropoff_m"] = to_dropoff
+        # How much further from the destination than the closest the car has been
+        # so far: a driver on a different but sensible road keeps closing in,
+        # a deviation drives away (uses only past pings, so it works live)
+        out["away_from_dropoff_m"] = to_dropoff - np.minimum.accumulate(to_dropoff)
         out["time_vs_plan"] = elapsed / max(float(plan["planned_duration_s"]), 1.0)
     else:
         # Plan not (yet) received: keep the ping, route features unknown
@@ -221,7 +231,8 @@ def ping_features(pings: pd.DataFrame, plan: Optional[Dict]) -> pd.DataFrame:
         out["planned_at"] = pd.NaT
         out["has_route_plan"] = False
         out["elapsed_s"] = (ts - first).dt.total_seconds().to_numpy()
-        for column in ("dist_off_route_m", "progress_pct", "dist_to_dropoff_m", "time_vs_plan"):
+        for column in ("dist_off_route_m", "off_route_run_s", "progress_pct", "dist_to_dropoff_m",
+                       "away_from_dropoff_m", "time_vs_plan"):
             out[column] = np.nan
 
     return out[PING_COLUMNS]
@@ -261,6 +272,8 @@ def window_features(pf: pd.DataFrame, ride_ended: bool) -> pd.DataFrame:
         n_pings=("ping_ts", "size"),
         dist_off_route_max_m=("dist_off_route_m", "max"),
         dist_off_route_mean_m=("dist_off_route_m", "mean"),
+        off_route_run_max_s=("off_route_run_s", "max"),
+        away_from_dropoff_max_m=("away_from_dropoff_m", "max"),
         stop_run_max_s=("stop_run_s", "max"),
         stationary_share=("is_stationary", "mean"),
         speed_mean_kmh=("speed_kmh", "mean"),

@@ -22,6 +22,8 @@ data/fhvhv/
 data/reference/
 # Simulator backfill output (regenerate with python -m simulation.run backfill)
 data/backfill/
+# Local feature cache (rebuild with python -m ml.build_features)
+data/features/
 # OSMnx download cache
 cache/
 

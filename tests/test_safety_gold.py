@@ -30,7 +30,9 @@ def spark():
         from pyspark.sql import SparkSession
         session = (SparkSession.builder.master("local[2]").appName("safety-gold-tests")
                    .config("spark.ui.enabled", "false").config("spark.sql.shuffle.partitions", "4")
-                   .config("spark.sql.session.timeZone", "UTC").getOrCreate())
+                   .config("spark.sql.session.timeZone", "UTC")
+                   .config("spark.sql.ansi.enabled", "true")      # like Databricks serverless
+                   .getOrCreate())
         session.range(1).count()
     except Exception as exc:
         pytest.skip(f"local Spark unavailable: {exc}")

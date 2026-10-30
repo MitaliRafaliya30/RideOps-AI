@@ -16,7 +16,7 @@ import uuid
 import streamlit as st
 
 from src.agent import ask_with_trace
-from src.config import validate_config, DATABRICKS_CATALOG, DATABRICKS_SCHEMA
+from src.config import validate_config, DATABRICKS_CATALOG, DATABRICKS_SCHEMA, LLM_MODEL
 
 
 st.set_page_config(
@@ -47,7 +47,7 @@ if "messages" not in st.session_state:
 # --- Header ---
 st.title("🚕 RideOps AI Assistant")
 st.caption(
-    f"Ask questions about ride operations in plain English. "
+    f"Ask about ride operations and rider safety in plain English. "
     f"Queries run against `{DATABRICKS_CATALOG}.{DATABRICKS_SCHEMA}` "
     f"(curated Gold tables only)."
 )
@@ -65,6 +65,22 @@ against the RideOps Gold layer on Databricks.
 intermediate layers) are deliberately out of reach.
 
 **Read-only:** guardrails reject any query that isn't a SELECT.
+
+**Rider safety:** two domain tools with fixed, reviewed SQL
+(`explain_ride`, `safety_briefing`); everything else is text-to-SQL.
+        """
+    )
+    st.caption(f"Model: `{LLM_MODEL}`")
+
+    st.subheader("Try")
+    st.markdown(
+        """
+- Give me the safety briefing for 2026-05-08
+- Why was ride 01bd0097-94a7-4c34-ae3e-8d22ad4bdb52 flagged?
+- Which borough has the highest alert rate per 1,000 trips?
+- What is the model's recall on simulated rides?
+- Did the latest data quality run have any failures?
+- How many rides were cancelled last week?
         """
     )
 
@@ -95,7 +111,7 @@ for msg in st.session_state.messages:
 
 
 # --- Handle new input ---
-if prompt := st.chat_input("Ask about rides, drivers, zones, revenue..."):
+if prompt := st.chat_input("Ask about rides, revenue, safety alerts, a ride id..."):
 
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):

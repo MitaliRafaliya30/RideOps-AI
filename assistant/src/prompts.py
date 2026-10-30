@@ -11,8 +11,8 @@ that understands your business. Two concrete wins:
      two legitimate interpretations) means answers match how RideOps
      actually measures things, rather than the model's best guess.
 
-Deliberately not RAG: the schema is 14 tables and fits comfortably in
-context. Retrieval infrastructure would add complexity without adding
+Deliberately not RAG: the schema is 21 tables (14 operations + 7 rider
+safety) and fits comfortably in context. Retrieval infrastructure would add complexity without adding
 capability at this size.
 """
 
@@ -110,6 +110,54 @@ Revenue = SUM(total_fare) WHERE final_status = 'completed'
 
 Wait time = fact_ride.wait_time_sec (requested to driver arrival)
 Ride duration = fact_ride.ride_duration_sec (started to completed)
+
+## RIDER SAFETY (third area, separate from the two worlds above)
+
+A detector scores every ride every 60 seconds from GPS and raises alerts.
+Alert types (dim_incident_type.alert_type): unexpected_stop (long stop or
+possible crash, high severity), route_deviation, gps_spoofing, wrong_dropoff.
+Rules catch gps_spoofing and wrong_dropoff; a LightGBM model catches the rest.
+
+Tables and grain:
+- fact_ride_safety: one row per tracked ride. max_risk_score, has_alert,
+  alert_count, first_alert_type, minutes_to_first_alert, pickup_zone_key,
+  date_key, source, data_role, and vs ground truth: true_incident_type,
+  outcome ('caught','missed','false_alarm','clean'), false_alarm (boolean),
+  detection_delay_s.
+- fact_safety_alert: one row per ride per alert type (the safety team's
+  queue): detected_at, risk_score, reasons (plain-English why), alert_source.
+- safety_window_scores: one row per ride per minute (risk_score, alert, reasons).
+- agg_safety_hourly: zone x date x hour x source; SUM(rides_tracked),
+  SUM(alerted_rides), alerts_<type> columns. Pre-aggregated: always SUM.
+- ml_model_performance: model_version x date x source; daily recall etc.
+- dq_check_results: data quality checks, one row per check per run
+  (status 'pass','warn','fail','skipped'); the latest run has max(checked_at).
+
+Joins: fact_safety_alert.ride_id -> fact_ride_safety.ride_id;
+fact_safety_alert.alert_type -> dim_incident_type.alert_type;
+fact_ride_safety.pickup_zone_key -> dim_zone.zone_key;
+fact_ride_safety.date_key -> dim_date.date_key.
+
+Safety metrics (same definitions as the model card and the dashboard):
+- Alerted rides per 1,000 = 1000 * rides with has_alert / rides tracked
+- Recall = rides with outcome 'caught' / rides with a true_incident_type
+- False alarms per 1,000 = 1000 * rides with false_alarm / rides tracked
+  (only rows where has_ground_truth is true)
+- Precision = caught rides / alerted rides (ground-truth rows only)
+
+Honesty rules, ALWAYS apply:
+- Ground truth exists only for simulated rides (has_ground_truth = true).
+  Live rides (source = 'live') never get recall or false alarms: say it is
+  unknown whether their alerts were right.
+- Rows with data_role = 'training data (optimistic)' are the week the model
+  learned from. ALWAYS compute the asked metric from the tables first and
+  report that number; then add that it is optimistic and that the honest
+  holdout-week results (not in these tables) are recall 94.0% and 0.99
+  false alarms per 1,000 trips. Never answer with the holdout number alone.
+- All GPS and incidents are simulated; never present them as real events.
+
+Domain tools: for one specific ride id use explain_ride; for "what happened
+on <day>" / "today" / "latest" use safety_briefing. Use SQL for everything else.
 
 ## QUERY RULES
 

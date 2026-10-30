@@ -20,21 +20,21 @@ specific one, which avoids breakage when a model is retired.
 """
 
 from langchain_openai import ChatOpenAI
-from langchain_openai import ChatOpenAI
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-from src.config import OPENROUTER_API_KEY, OPENROUTER_BASE_URL
-from src.connection import get_database
+from src.config import LLM_MODEL, OPENROUTER_API_KEY, OPENROUTER_BASE_URL
+from src.connection import get_database, run_query
+from src import safety_tools
 from src.prompts import SYSTEM_PROMPT
 from src.guardrails import validate_query, GuardrailViolation
 
 
 def build_llm():
     """
-    Claude Haiku via OpenRouter.
+    The configured OpenRouter model (LLM_MODEL; default Claude Haiku).
 
     temperature=0 for deterministic SQL, the same question should
     produce the same query every time.
@@ -43,16 +43,13 @@ def build_llm():
     max_retries handles transient upstream rate limits with backoff.
     """
     return ChatOpenAI(
-        model="~anthropic/claude-haiku-latest",
+        model=LLM_MODEL,
         api_key=OPENROUTER_API_KEY,
         base_url=OPENROUTER_BASE_URL,
         temperature=0,
         max_tokens=1000,
         max_retries=6,
     )
-
-from langchain_core.tools import BaseTool
-from src.guardrails import validate_query, GuardrailViolation
 
 def _wrap_query_tool(tool: BaseTool) -> BaseTool:
     """
@@ -73,6 +70,31 @@ def _wrap_query_tool(tool: BaseTool) -> BaseTool:
 
     tool._run = guarded_run
     return tool
+
+@tool
+def explain_ride(ride_id: str) -> str:
+    """Explain one ride's safety story: its alerts with reasons and recommended action,
+    its risk minute by minute, and (for simulated rides) whether the alert was right.
+    Use whenever the user asks about a specific ride id."""
+    try:
+        return safety_tools.explain_ride(ride_id, run_query)
+    except safety_tools.ToolInputError as e:
+        return f"INVALID INPUT: {e}"
+
+
+@tool
+def safety_briefing(day: str) -> str:
+    """Safety summary for one day (YYYY-MM-DD, or 'latest'): rides tracked, alert rate,
+    alerts by type, most alerted zones, model recall and false alarms where ground truth
+    exists, and the latest data quality run. Use for 'what happened on/yesterday/today' questions."""
+    try:
+        return safety_tools.safety_briefing(day, run_query)
+    except safety_tools.ToolInputError as e:
+        return f"INVALID INPUT: {e}"
+
+
+DOMAIN_TOOLS = ("explain_ride", "safety_briefing")
+
 
 def build_agent():
     """
@@ -95,6 +117,8 @@ def build_agent():
         _wrap_query_tool(t) if t.name == "sql_db_query" else t
         for t in tools
     ]
+    # Domain tools: fixed, reviewed SQL for the safety team's most common questions
+    tools += [explain_ride, safety_briefing]
 
     agent = create_react_agent(
         model=llm,
@@ -156,7 +180,7 @@ def ask(question: str, thread_id: str = "default", verbose: bool = True) -> str:
 
     config = {
         "configurable": {"thread_id": thread_id},
-        "recursion_limit": 10,
+        "recursion_limit": 12,
     }
     inputs = {"messages": [("user", question)]}
 
@@ -188,7 +212,7 @@ def ask_with_trace(question: str, thread_id: str = "default") -> dict:
 
     config = {
         "configurable": {"thread_id": thread_id},
-        "recursion_limit": 10,
+        "recursion_limit": 12,
     }
     inputs = {"messages": [("user", question)]}
 
@@ -206,9 +230,12 @@ def ask_with_trace(question: str, thread_id: str = "default") -> dict:
             for call in tool_calls:
                 if call.get("name") == "sql_db_query":
                     pending_sql = call.get("args", {}).get("query", "")
+                elif call.get("name") in DOMAIN_TOOLS:
+                    args = ", ".join(f"{k}={v!r}" for k, v in call.get("args", {}).items())
+                    pending_sql = f"-- domain tool (fixed, reviewed SQL): {call['name']}({args})"
 
-        # The matching tool result: pair it with the SQL we just saw
-        if getattr(message, "name", None) == "sql_db_query" and pending_sql:
+        # The matching tool result: pair it with the SQL (or tool call) we just saw
+        if getattr(message, "name", None) in ("sql_db_query", *DOMAIN_TOOLS) and pending_sql:
             queries.append({
                 "sql": pending_sql.strip(),
                 "result": str(message.content)[:500],

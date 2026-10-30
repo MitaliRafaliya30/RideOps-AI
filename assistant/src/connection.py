@@ -6,7 +6,9 @@ Bronze and Silver are deliberately not exposed, the assistant works
 with curated, verified data, never raw or in-progress tables.
 """
 
-from sqlalchemy import create_engine
+from functools import lru_cache
+
+from sqlalchemy import create_engine, text
 from langchain_community.utilities import SQLDatabase
 
 from src.config import (
@@ -19,6 +21,7 @@ from src.config import (
 )
 
 
+@lru_cache(maxsize=1)
 def build_engine():
     """
     Create a SQLAlchemy engine pointed at the Databricks SQL Warehouse.
@@ -84,3 +87,13 @@ def test_connection():
         "visible_tables": sorted(visible_tables),
         "test_query_result": result,
     }
+
+
+def run_query(sql: str, params: dict) -> list:
+    """
+    Parameterised read for the domain tools (src/safety_tools.py): values are
+    bound by the driver, never pasted into the SQL text. Rows as dicts.
+    """
+    with build_engine().connect() as conn:
+        result = conn.execute(text(sql), params)
+        return [dict(row._mapping) for row in result]

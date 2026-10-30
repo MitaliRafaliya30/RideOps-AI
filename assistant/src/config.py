@@ -20,6 +20,9 @@ DATABRICKS_SCHEMA = os.getenv("DATABRICKS_SCHEMA", "gold")
 # LLM
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Any OpenRouter model with tool calling. Default: Claude Haiku (paid, strongest
+# here). Set LLM_MODEL in .env to switch, e.g. a free model while out of credits.
+LLM_MODEL = os.getenv("LLM_MODEL", "~anthropic/claude-haiku-latest")
 
 # Gold tables the assistant may query.
 # Deliberately excludes Bronze and Silver, the assistant only sees
@@ -39,6 +42,14 @@ ALLOWED_TABLES = [
     "agg_zone_hourly",
     "agg_driver_daily",
     "agg_revenue_daily",
+    # Rider safety (M8, M12, M9): alerts, model outputs, monitoring
+    "dim_incident_type",
+    "fact_ride_safety",
+    "fact_safety_alert",
+    "safety_window_scores",
+    "agg_safety_hourly",
+    "ml_model_performance",
+    "dq_check_results",
 ]
 
 

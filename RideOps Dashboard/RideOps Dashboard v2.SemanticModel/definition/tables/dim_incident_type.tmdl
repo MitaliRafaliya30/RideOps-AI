@@ -1,0 +1,101 @@
+/// The four alert types: meaning, severity, detector and recommended action
+table dim_incident_type
+	lineageTag: 41895e9f-a6d4-4503-bf4f-291cf52f12af
+
+	column incident_type_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: cceb24d8-de6c-40ba-8404-aceffd373057
+		summarizeBy: none
+		sourceColumn: incident_type_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_type
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 7f973961-675a-472d-bd23-88e9162fecd9
+		summarizeBy: none
+		sourceColumn: alert_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 50141e42-f8ed-4384-94f5-13ca8e8b9ad6
+		summarizeBy: none
+		sourceColumn: alert_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column description
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 7a4572e2-247c-47aa-80aa-a0d3a51aabdd
+		summarizeBy: none
+		sourceColumn: description
+
+		annotation SummarizationSetBy = Automatic
+
+	column severity
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 6caa1b4e-ff86-49a0-b1b2-3026fc593a64
+		summarizeBy: none
+		sourceColumn: severity
+
+		annotation SummarizationSetBy = Automatic
+
+	column detected_by
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 9b29309b-f489-4487-a9e6-66d7be2b45ad
+		summarizeBy: none
+		sourceColumn: detected_by
+
+		annotation SummarizationSetBy = Automatic
+
+	column ground_truth_types
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: c4f2d038-b0cb-4fd4-84c6-10ea3af041cf
+		summarizeBy: none
+		sourceColumn: ground_truth_types
+
+		annotation SummarizationSetBy = Automatic
+
+	column recommended_action
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: ea6fa06e-efc0-4d6e-bb35-93a250a666fb
+		summarizeBy: none
+		sourceColumn: recommended_action
+
+		annotation SummarizationSetBy = Automatic
+
+	column response_target_min
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: a8185c01-4e91-41fb-9bcf-afb9f86fb52c
+		summarizeBy: sum
+		sourceColumn: response_target_min
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_incident_type = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dim_incident_type_Table = gold_Schema{[Name="dim_incident_type",Kind="Table"]}[Data]
+				in
+				    dim_incident_type_Table
+
+	annotation PBI_ResultType = Table
+

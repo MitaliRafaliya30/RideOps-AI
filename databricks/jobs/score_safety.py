@@ -42,12 +42,12 @@ OUTPUT_DDL = ("risk_score DOUBLE, alert BOOLEAN, alert_source STRING, alert_type
 def score_windows(features, predict_udf, feature_names):
     """Every window with the detector's output. Features go in as double, by name."""
     inputs = F.struct(*[F.col(c).cast("double").alias(c) for c in feature_names])
-    return (
-        features
-        .withColumn("_out", predict_udf(inputs))
-        .select(*KEYS, "_out.*")
-        .withColumn("scored_at", F.current_timestamp())
-    )
+    scored = features.withColumn("_out", predict_udf(inputs)).select(*KEYS, "_out.*")
+    # spark_udf turns a missing text value into the strings "nan" / "None":
+    # windows without an alert must carry real NULLs, not the word "None"
+    for c in ("alert_source", "alert_type", "reasons"):
+        scored = scored.withColumn(c, F.when(F.col(c).isin("nan", "NaN", "None", ""), None).otherwise(F.col(c)))
+    return scored.withColumn("scored_at", F.current_timestamp())
 
 
 def alerts_from_scores(scores):

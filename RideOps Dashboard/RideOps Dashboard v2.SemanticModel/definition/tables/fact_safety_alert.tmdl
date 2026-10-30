@@ -1,0 +1,142 @@
+/// The safety team's queue: one alert per ride and alert type, with readable reasons
+table fact_safety_alert
+	lineageTag: dd279d56-fe85-4894-9ea6-29d0d38a0ffc
+
+	column alert_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: df309a50-ec2f-4b4e-8045-42871bd23055
+		summarizeBy: none
+		sourceColumn: alert_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column ride_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 29cdb91f-ca36-4bbc-8bda-b223479dc77c
+		summarizeBy: none
+		sourceColumn: ride_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: c48639ef-9db0-4703-9462-7d71df1aaffd
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_type
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0d0192d4-0a3a-46a8-a0b0-6455531d3191
+		summarizeBy: none
+		sourceColumn: alert_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 6b1ca5a9-c0f3-4005-9a63-b630b299dd86
+		summarizeBy: none
+		sourceColumn: alert_source
+
+		annotation SummarizationSetBy = Automatic
+
+	column detected_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: e5525576-3f97-497c-aadd-7cd84baaed0f
+		summarizeBy: none
+		sourceColumn: detected_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column detected_window_index
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: a24daf06-64e1-49f6-b77d-0b0487c3bf8a
+		summarizeBy: none
+		sourceColumn: detected_window_index
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: be5b0e0e-181f-4fa5-88bb-c6eb420cd777
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column max_risk_score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: fd62fe28-c578-4f99-b1f7-89fb74769ff0
+		summarizeBy: none
+		sourceColumn: max_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column alert_windows
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 0ee8b3c3-b93e-4246-91f9-9f69deeaf4d8
+		summarizeBy: sum
+		sourceColumn: alert_windows
+
+		annotation SummarizationSetBy = Automatic
+
+	column reasons
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: be67aab1-3424-447f-bb4f-0d3eea9c0887
+		summarizeBy: none
+		sourceColumn: reasons
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_version
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: a510334a-faf0-4981-b7cb-66de100f45e4
+		summarizeBy: none
+		sourceColumn: model_version
+
+		annotation SummarizationSetBy = Automatic
+
+	column scored_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: d01c39cd-d55c-4ab4-b2f6-b5a176afdf08
+		summarizeBy: none
+		sourceColumn: scored_at
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_safety_alert = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    fact_safety_alert_Table = gold_Schema{[Name="fact_safety_alert",Kind="Table"]}[Data]
+				in
+				    fact_safety_alert_Table
+
+	annotation PBI_ResultType = Table
+

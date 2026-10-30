@@ -1,0 +1,234 @@
+/// One row per tracked ride: risk, first alert, zone, and outcome vs ground truth (simulated rides only)
+table fact_ride_safety
+	lineageTag: 84825c9e-6b5b-4806-8e47-8b366adc8f54
+
+	column ride_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 7058d08d-e5e7-421d-9432-cb8f72bc1b80
+		summarizeBy: none
+		sourceColumn: ride_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 2ae968ea-7807-4ec9-bbc3-ae367197a907
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_role
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 91b04435-844f-4eb6-8d16-14c87b0f947b
+		summarizeBy: none
+		sourceColumn: data_role
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: e9910808-3fc1-415b-8a2e-4be2fb3d75a9
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column hour_of_day
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 889e1bca-bd3e-4bf9-992a-4e4241ffe760
+		summarizeBy: none
+		sourceColumn: hour_of_day
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: f56266eb-680e-4c1b-b01e-38839805cdae
+		summarizeBy: none
+		sourceColumn: pickup_zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column trip_start
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 747c6563-137d-4e50-b53f-5aeb6522c44a
+		summarizeBy: none
+		sourceColumn: trip_start
+
+		annotation SummarizationSetBy = Automatic
+
+	column minutes_tracked
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 043c9df3-dd9e-4b1e-91f2-f4b71d06f875
+		summarizeBy: sum
+		sourceColumn: minutes_tracked
+
+		annotation SummarizationSetBy = Automatic
+
+	column max_risk_score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: a2177df2-cbe2-4720-a8d3-41300929c5d0
+		summarizeBy: none
+		sourceColumn: max_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column has_alert
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: debe27b0-477b-4181-8a07-587de66513f9
+		summarizeBy: none
+		sourceColumn: has_alert
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_count
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 205ae79c-d96b-4326-b7e8-40abc4c1c8f7
+		summarizeBy: sum
+		sourceColumn: alert_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_windows
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 6b64592b-7e62-4d1c-936f-e7e09bb00050
+		summarizeBy: sum
+		sourceColumn: alert_windows
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_types
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 755a3039-b633-449a-9614-b4736bf5b96a
+		summarizeBy: none
+		sourceColumn: alert_types
+
+		annotation SummarizationSetBy = Automatic
+
+	column first_alert_type
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: f4301c56-67d2-49aa-bcc1-0d3900768970
+		summarizeBy: none
+		sourceColumn: first_alert_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column first_alert_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 8f2a8bbe-d389-429e-b5c3-55f5716b0c31
+		summarizeBy: none
+		sourceColumn: first_alert_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column minutes_to_first_alert
+		dataType: double
+		sourceProviderType: double
+		lineageTag: f77d118f-97af-47a0-bf1f-08c09b102499
+		summarizeBy: none
+		sourceColumn: minutes_to_first_alert
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column has_ground_truth
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: d0c50d98-c444-42fb-bd4c-c1a2ee7ce8fb
+		summarizeBy: none
+		sourceColumn: has_ground_truth
+
+		annotation SummarizationSetBy = Automatic
+
+	column true_incident_type
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 10808a72-be0f-49d6-b9af-2fc0d19594bc
+		summarizeBy: none
+		sourceColumn: true_incident_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column outcome
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 897977f4-00d7-4d3a-8971-842b44f7f482
+		summarizeBy: none
+		sourceColumn: outcome
+
+		annotation SummarizationSetBy = Automatic
+
+	column false_alarm
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: e23e8626-4ce5-477e-a51e-f70b9c987a65
+		summarizeBy: none
+		sourceColumn: false_alarm
+
+		annotation SummarizationSetBy = Automatic
+
+	column detection_delay_s
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 2540d31b-2dcf-4b41-9581-ef276a7a8805
+		summarizeBy: none
+		sourceColumn: detection_delay_s
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column model_version
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 52e63867-6c3b-4bd7-a775-72c75294979c
+		summarizeBy: none
+		sourceColumn: model_version
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_ride_safety = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    fact_ride_safety_Table = gold_Schema{[Name="fact_ride_safety",Kind="Table"]}[Data]
+				in
+				    fact_ride_safety_Table
+
+	annotation PBI_ResultType = Table
+

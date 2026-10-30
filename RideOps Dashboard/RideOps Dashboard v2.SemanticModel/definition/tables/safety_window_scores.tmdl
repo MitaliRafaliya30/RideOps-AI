@@ -1,0 +1,142 @@
+/// Risk score of every ride for every minute (ride timeline)
+table safety_window_scores
+	lineageTag: 55dcec09-e87c-4da1-a163-32d6148179a5
+
+	column ride_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 8fe75962-c6a6-495b-ab08-91912b7343e6
+		summarizeBy: none
+		sourceColumn: ride_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: e0439d6e-a563-43b8-98b5-b2ecd7b7bb83
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column window_index
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 6de72825-d411-47d3-ad7d-28a5c3e68640
+		summarizeBy: none
+		sourceColumn: window_index
+
+		annotation SummarizationSetBy = Automatic
+
+	column window_start
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 57802105-0b83-4edd-8114-24372708b09b
+		summarizeBy: none
+		sourceColumn: window_start
+
+		annotation SummarizationSetBy = Automatic
+
+	column window_end
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 35473abf-6457-4379-ab76-85533c10ab42
+		summarizeBy: none
+		sourceColumn: window_end
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_final_window
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 0dbf75b9-0c00-4825-890a-df685d8894d6
+		summarizeBy: none
+		sourceColumn: is_final_window
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 16e034f8-8269-49b9-9b9f-7d3eb4611f83
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column alert
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: b5def3a6-2c4b-4911-8da9-1eb5b87005b1
+		summarizeBy: none
+		sourceColumn: alert
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 23788eb7-7fb2-4eb1-b9e0-795100933248
+		summarizeBy: none
+		sourceColumn: alert_source
+
+		annotation SummarizationSetBy = Automatic
+
+	column alert_type
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 046cdc84-315e-4d75-8b38-2f093afece35
+		summarizeBy: none
+		sourceColumn: alert_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column reasons
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: d3b01704-1438-467d-8a83-aefc658dd6fd
+		summarizeBy: none
+		sourceColumn: reasons
+
+		annotation SummarizationSetBy = Automatic
+
+	column model_version
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: d0435f35-30d8-422b-8154-a18892089868
+		summarizeBy: none
+		sourceColumn: model_version
+
+		annotation SummarizationSetBy = Automatic
+
+	column scored_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 0890333c-0aed-4b01-809c-3726d4e3820d
+		summarizeBy: none
+		sourceColumn: scored_at
+
+		annotation SummarizationSetBy = Automatic
+
+	partition safety_window_scores = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    safety_window_scores_Table = gold_Schema{[Name="safety_window_scores",Kind="Table"]}[Data]
+				in
+				    safety_window_scores_Table
+
+	annotation PBI_ResultType = Table
+

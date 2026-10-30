@@ -1,0 +1,140 @@
+/// Alert volume by zone, date, hour and source
+table agg_safety_hourly
+	lineageTag: 5c905ddf-f5b2-48cc-a0ab-9c564df30f4a
+
+	column pickup_zone_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: a5985842-a553-418f-b784-74e26c62068d
+		summarizeBy: none
+		sourceColumn: pickup_zone_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 170d446a-ecee-4157-b811-9b5b5433f46f
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column hour_of_day
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 9b12bdb8-5f97-4e9b-9ab2-7b883d1c14a8
+		summarizeBy: none
+		sourceColumn: hour_of_day
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 5e910ee0-ece0-405e-a567-cc0d491a3ddf
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column rides_tracked
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 1c5bab18-f7c6-41e8-8cd1-a77d34c4b886
+		summarizeBy: sum
+		sourceColumn: rides_tracked
+
+		annotation SummarizationSetBy = Automatic
+
+	column alerted_rides
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 691f5b34-62d4-49d1-ab40-e09a977da70b
+		summarizeBy: sum
+		sourceColumn: alerted_rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_max_risk_score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 41064492-2c1c-41a1-836c-6da416e12b8d
+		summarizeBy: none
+		sourceColumn: avg_max_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column alerts_unexpected_stop
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 010e500f-eeb4-4564-9849-e08f38ff7f9f
+		summarizeBy: sum
+		sourceColumn: alerts_unexpected_stop
+
+		annotation SummarizationSetBy = Automatic
+
+	column alerts_route_deviation
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 6b5ada31-0025-4dc3-8c02-fc76edd4b333
+		summarizeBy: sum
+		sourceColumn: alerts_route_deviation
+
+		annotation SummarizationSetBy = Automatic
+
+	column alerts_gps_spoofing
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: b8d6a941-6103-4e78-87cc-121f100d0c4e
+		summarizeBy: sum
+		sourceColumn: alerts_gps_spoofing
+
+		annotation SummarizationSetBy = Automatic
+
+	column alerts_wrong_dropoff
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 471474b8-7172-4269-b5d9-f4bca85a041c
+		summarizeBy: sum
+		sourceColumn: alerts_wrong_dropoff
+
+		annotation SummarizationSetBy = Automatic
+
+	column alerted_rides_per_1k
+		dataType: double
+		sourceProviderType: double
+		lineageTag: d41b1dc4-c530-43ef-b7a5-a95e21114ce7
+		summarizeBy: none
+		sourceColumn: alerted_rides_per_1k
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition agg_safety_hourly = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    agg_safety_hourly_Table = gold_Schema{[Name="agg_safety_hourly",Kind="Table"]}[Data]
+				in
+				    agg_safety_hourly_Table
+
+	annotation PBI_ResultType = Table
+

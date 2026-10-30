@@ -9,7 +9,7 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 1
 
-annotation PBI_QueryOrder = ["agg_driver_daily","agg_revenue_daily","agg_zone_hourly","dim_cancellation_reason","dim_date","dim_driver","dim_passenger","dim_payment_method","dim_ride_status","dim_vehicle","dim_zone","fact_fhvhv_trip","fact_ride","fact_ride_event"]
+annotation PBI_QueryOrder = ["agg_driver_daily","agg_revenue_daily","agg_zone_hourly","dim_cancellation_reason","dim_date","dim_driver","dim_passenger","dim_payment_method","dim_ride_status","dim_vehicle","dim_zone","fact_fhvhv_trip","fact_ride","fact_ride_event","dq_defect_scorecard","dq_all_quarantine","dq_check_results","safety_window_scores","ml_model_performance","agg_safety_hourly","fact_safety_alert","fact_ride_safety","dim_incident_type"]
 
 annotation PBI_ProTooling = ["DevMode","MCP-PBIModeling"]
 
@@ -30,6 +30,13 @@ ref table fact_ride_event
 ref table _Measures
 ref table dq_defect_scorecard
 ref table dq_all_quarantine
+ref table dq_check_results
+ref table safety_window_scores
+ref table ml_model_performance
+ref table agg_safety_hourly
+ref table fact_safety_alert
+ref table fact_ride_safety
+ref table dim_incident_type
 
 ref cultureInfo en-US
 

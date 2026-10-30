@@ -1,13 +1,13 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "5517cc66234ea5c97722",
   "position": {
     "x": 730,
     "y": 432,
-    "z": 6000,
+    "z": 7000,
     "height": 277,
     "width": 535,
-    "tabOrder": 6000
+    "tabOrder": 7000
   },
   "visual": {
     "visualType": "clusteredBarChart",
@@ -223,7 +223,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Quarantine Reasons Breakdown'"
+                  "Value": "'Silver Quarantine Reasons (reference checks)'"
                 }
               }
             },

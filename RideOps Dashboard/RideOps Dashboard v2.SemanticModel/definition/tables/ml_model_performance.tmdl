@@ -1,0 +1,181 @@
+/// Daily model monitoring; recall and false alarms only where ground truth exists
+table ml_model_performance
+	lineageTag: 7c501adf-5950-4f05-ad32-173518ec10c6
+
+	column model_version
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 293b2bb9-9f17-4e6c-92e3-7d33fb127718
+		summarizeBy: none
+		sourceColumn: model_version
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 040e19f3-abe3-4506-9792-1d09e01c92f8
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 55862833-47a8-45c2-86ef-40d6d23894a7
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_role
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: fa1e68bb-cea2-48d9-bba6-021c8b4cb27c
+		summarizeBy: none
+		sourceColumn: data_role
+
+		annotation SummarizationSetBy = Automatic
+
+	column rides
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 6b3518b0-dcba-4c4b-aa1e-6d43d70fc28a
+		summarizeBy: sum
+		sourceColumn: rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column alerted_rides
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: a6fdb16e-4489-45e0-9d86-2d49db7b33c4
+		summarizeBy: sum
+		sourceColumn: alerted_rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_max_risk_score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6390daf6-57e8-4b7a-9fcc-7137ce8cfddc
+		summarizeBy: none
+		sourceColumn: avg_max_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column has_ground_truth
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 4e7cf7ec-e984-4cbf-be4d-167d6198b1f5
+		summarizeBy: none
+		sourceColumn: has_ground_truth
+
+		annotation SummarizationSetBy = Automatic
+
+	column incidents
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: a03cb5d0-3629-40a0-9fae-19b52818577b
+		summarizeBy: sum
+		sourceColumn: incidents
+
+		annotation SummarizationSetBy = Automatic
+
+	column caught
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 46457d9a-74e5-44f1-bd6e-f8c630cf0061
+		summarizeBy: sum
+		sourceColumn: caught
+
+		annotation SummarizationSetBy = Automatic
+
+	column false_alarm_rides
+		dataType: int64
+		formatString: #,##0
+		sourceProviderType: bigint
+		lineageTag: 7c5adc6c-c7bc-4f5f-a1b1-80db397db4e9
+		summarizeBy: sum
+		sourceColumn: false_alarm_rides
+
+		annotation SummarizationSetBy = Automatic
+
+	column median_detection_delay_s
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 111cbe93-5937-4232-806c-1e380b8ff0c4
+		summarizeBy: none
+		sourceColumn: median_detection_delay_s
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column alerted_rides_per_1k
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 72f88c2e-c22c-4fcb-89a0-6c9bb6550e26
+		summarizeBy: none
+		sourceColumn: alerted_rides_per_1k
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column recall
+		dataType: double
+		sourceProviderType: double
+		lineageTag: d26023f5-6410-4d33-90ad-fa6043d5b7f7
+		summarizeBy: none
+		sourceColumn: recall
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column false_alarms_per_1k
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 8163665a-0dee-4aef-a3c6-dc9ba357d79b
+		summarizeBy: none
+		sourceColumn: false_alarms_per_1k
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column precision
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 56a20f47-4c3d-478b-b128-53ad0f3f16a1
+		summarizeBy: none
+		sourceColumn: precision
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition ml_model_performance = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    ml_model_performance_Table = gold_Schema{[Name="ml_model_performance",Kind="Table"]}[Data]
+				in
+				    ml_model_performance_Table
+
+	annotation PBI_ResultType = Table
+

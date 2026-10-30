@@ -45,6 +45,7 @@ def matrix(windows: pd.DataFrame, features=None) -> pd.DataFrame:
     return windows[features or MODEL_FEATURES].astype(float)
 
 DETERMINISTIC_RULES = ["gps_spoofing", "wrong_dropoff"]
+MIN_REASON_SHARE = 0.25     # a reason must push the risk at least 1/4 as hard as the top one
 
 # Which incident a feature points to, for the alert type of a model alert
 FEATURE_FAMILY = {
@@ -105,13 +106,22 @@ class SafetyDetector:
                                                "rule: trip ended far from the destination")
         return out
 
-    def top_contributions(self, windows: pd.DataFrame, n: int = 3):
-        """Per window, the n features pushing the risk up the most: [(feature, value), ...]."""
+    def top_contributions(self, windows: pd.DataFrame, n: int = 3, min_share: float = MIN_REASON_SHARE):
+        """
+        Per window, up to n features pushing the risk up the most: [(feature, value), ...].
+        A reason is kept only if it pushes at least `min_share` as hard as the strongest
+        one: "stopped for 310 s" explains an alert, "13 m further from the destination"
+        next to it is noise a safety agent should not have to read.
+        """
         x = matrix(windows, self.features)
         contrib = self.booster.predict(x, pred_contrib=True)[:, :-1]     # last column = base value
         order = np.argsort(-contrib, axis=1)[:, :n]
-        return [[(self.features[j], x.iat[i, j]) for j in row if contrib[i, j] > 0] or [(self.features[row[0]], x.iat[i, row[0]])]
-                for i, row in enumerate(order)]
+        out = []
+        for i, row in enumerate(order):
+            top = contrib[i, row[0]]
+            kept = [(self.features[j], x.iat[i, j]) for j in row if contrib[i, j] > 0 and contrib[i, j] >= min_share * top]
+            out.append(kept or [(self.features[row[0]], x.iat[i, row[0]])])
+        return out
 
     def save(self, directory: Path):
         """model.txt (LightGBM) + detector.json (threshold, features, version, metadata)."""

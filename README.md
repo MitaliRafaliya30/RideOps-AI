@@ -1,326 +1,173 @@
-RideOps AI
+# RideOps AI: real-time rider safety on a Databricks lakehouse
 
-A real-time ride operations platform built on a medallion lakehouse, with a deliberately broken data source.
-Three heterogeneous sources feed a governed Databricks lakehouse, surfaced through a five-page Power BI dashboard and a natural-language analytics assistant. Every data quality defect it catches was injected on purpose, and every number it reports is reconciled row-by-row back to source.
+A ride-hailing platform that watches every trip in progress and flags the ones where a rider may need help:
+a car stopped mid-trip for minutes, a driver far off the planned route, a faked GPS position, a trip that ended
+far from the destination. GPS pings stream through Azure into a medallion lakehouse; a hybrid of rules and a
+LightGBM model scores every ride every 60 seconds; alerts land in Gold with plain-English reasons, and are served
+to a Power BI dashboard and a natural-language assistant.
 
-
-![Databricks](https://img.shields.io/badge/Databricks-Lakeflow%20Declarative%20Pipelines-FF3621?logo=databricks&logoColor=white)
-![Azure Event Hubs](https://img.shields.io/badge/Azure%20Event%20Hubs-Kafka%20Protocol-0078D4?logo=microsoftazure&logoColor=white)
-![Azure Data Factory](https://img.shields.io/badge/Azure%20Data%20Factory-Metadata--Driven-0078D4?logo=microsoftazure&logoColor=white)
-![ADLS Gen2](https://img.shields.io/badge/ADLS%20Gen2-Landing%20Zone-0078D4?logo=microsoftazure&logoColor=white)
-![Delta Lake](https://img.shields.io/badge/Delta%20Lake-Unity%20Catalog-00ADD4?logo=delta&logoColor=white)
+![Databricks](https://img.shields.io/badge/Databricks-Lakeflow%20%7C%20Jobs%20%7C%20Unity%20Catalog-FF3621?logo=databricks&logoColor=white)
+![Azure](https://img.shields.io/badge/Azure-Event%20Hubs%20%7C%20ADF%20%7C%20ADLS%20Gen2-0078D4?logo=microsoftazure&logoColor=white)
 ![PySpark](https://img.shields.io/badge/PySpark-Structured%20Streaming-E25A1C?logo=apachespark&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![Power BI](https://img.shields.io/badge/Power%20BI-DirectQuery-F2C811?logo=powerbi&logoColor=black)
-![LangGraph](https://img.shields.io/badge/LangGraph-ReAct%20Agent-1C3C3C?logo=langchain&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Chat%20UI-FF4B4B?logo=streamlit&logoColor=white)
-![Data Quality](https://img.shields.io/badge/Data%20Quality-8%20Injected%20Defects-success)
-![Reconciliation](https://img.shields.io/badge/Reconciliation-Row%20Level-success)
+![LightGBM](https://img.shields.io/badge/LightGBM-hybrid%20detector-9ACD32)
+![MLflow](https://img.shields.io/badge/MLflow-UC%20registry%20%40champion-0194E2?logo=mlflow&logoColor=white)
+![Power BI](https://img.shields.io/badge/Power%20BI-composite%20model-F2C811?logo=powerbi&logoColor=black)
+![LangGraph](https://img.shields.io/badge/LangGraph-SQL%20agent%20%2B%20tools-1C3C3C?logo=langchain&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-286%20passing-success)
+
+> All GPS and incidents are **simulated** (there is no public rider-safety dataset), but the simulator is
+> calibrated on **15.35 M real NYC trips**: real roads, demand, traffic speeds and fares.
+
+## Results (holdout week, never used in development)
+
+| Detector | Incidents caught | False alarms / 1,000 trips | Median time to alert |
+|---|---|---|---|
+| Rules (baseline) | 93.3 % | 1.54 | 326 s |
+| Isolation Forest (unsupervised) | 30.8 % | 1.66 | 383 s |
+| **Hybrid: rules + LightGBM** | **94.0 %** | **0.99 (−36 %)** | **281 s (−45 s)** |
+
+Paired bootstrap (both detectors on the same resampled trips): recall equal; false alarms and delay both
+**significantly** lower. 41,578 trips, 845 incidents. Details: [model card](docs/MODEL_CARD.md).
 
 ## Architecture
 
-<p align="center">
-  <img 
-    src="docs/images/data-and-analytics-architecture.png" 
-    alt="RideOps AI — End-to-End Data & Analytics Architecture"
-    width="100%"
-  />
-</p>
+```mermaid
+flowchart LR
+    subgraph Sources
+        SIM[Simulator v2<br/>NYC road network,<br/>calibrated on 15.35 M trips]
+        PG[(PostgreSQL<br/>master data)]
+        TLC[NYC TLC trips<br/>15.35 M]
+    end
+    subgraph Azure
+        EH[Event Hubs<br/>ride-events, ride-gps]
+        ADF[Data Factory<br/>batch + backfill]
+        ADLS[(ADLS Gen2)]
+    end
+    subgraph Databricks["Databricks (Unity Catalog)"]
+        B[Bronze<br/>contract checks,<br/>quarantine]
+        S[Silver<br/>dedup, event time,<br/>GPS features + ride history]
+        G[Gold<br/>star schema +<br/>safety tables]
+        M[Model @champion<br/>MLflow registry]
+        SC[score_safety<br/>every 60 s window]
+        DQ[DQ checks<br/>+ drift PSI]
+    end
+    SIM -->|live GPS + events| EH
+    SIM -->|backfill| ADLS
+    PG --> ADF
+    TLC --> ADF
+    ADF --> ADLS
+    EH --> B
+    ADLS --> B
+    B --> S --> G
+    S --> SC
+    M --> SC --> G
+    G --> DQ
+    G --> PBI[Power BI<br/>6 safety pages]
+    G --> AI[AI assistant<br/>LangGraph + tools]
+```
 
+One Databricks Job runs **pipeline → scoring → safety Gold → data quality** (defined as code, retries, e-mail on
+failure). Training happens offline on a laptop with the **same feature code** the pipeline runs.
 
-## Why this project exists
-Most portfolio pipelines move clean data from A to B and call it done. Real pipelines spend most of their life dealing with data that is late, duplicated, malformed, or simply missing.
-So this one generates its own bad data on purpose. A Python simulator emits realistic ride lifecycle events with eight distinct defect types injected at configurable rates. The pipeline's job is to catch each one at the layer that can actually detect it, and to prove it caught them with a measured scorecard rather than an assertion.
-The result is a platform where you can point at any figure on the dashboard and trace it back to source, and where "data quality" is a number you can query, not a claim in a README.
+## How it works
 
-## 📥 Data Sources
+1. **Data.** Simulator v2 drives rides along the real NYC road network (OSMnx, 55 k nodes), calibrated on
+   15.35 M FHVHV trips (origin-destination matrix, hourly traffic, fare model R² 0.77). It injects 5 incident
+   types (~2 % of trips) **and harmless look-alikes** (innocent long stops, detours) so false alarms are real.
+   Live mode streams to Event Hubs; backfill mode writes Parquet that ADF lands in ADLS.
+2. **Lakehouse.** Lakeflow Declarative Pipelines: Bronze validates the message contract and quarantines; Silver
+   deduplicates, orders by event time, computes per-ping and per-minute features in one shared module
+   ([`safety_features.py`](databricks/utilities/safety_features.py)), the same file used for training, so
+   there is no training-serving skew. Warn-level expectations count GPS anomalies without dropping them (a
+   GPS jump is a safety signal, not garbage).
+3. **EDA.** Data audit, imbalance (1.9 % of trips, 0.7 % of minutes), effect sizes, hard negatives, PSI
+   stability, feature engineering, rule baseline. [Findings](docs/EDA_FINDINGS.md).
+4. **ML.** Rules vs Isolation Forest vs LightGBM vs hybrid, all tuned to the **same false-alarm budget**; a
+   second simulated week as an untouched holdout; bootstrap confidence intervals; SHAP reason codes.
+5. **Serving.** The detector is packaged as an MLflow model, registered in Unity Catalog as `@champion`, and
+   scored with `spark_udf`; promoting or rolling back a model is an alias change, not a code change.
+6. **Analytics.** Power BI on a composite model (Import for safety, DirectQuery for live operations, Dual for
+   shared dimensions): overview, alert queue with reasons and actions, zone x hour risk, model performance,
+   data quality, and a minute-by-minute ride timeline. [Dashboard](docs/DASHBOARD.md).
+7. **AI assistant.** A LangGraph agent over 21 Gold tables with read-only guardrails, a semantic layer, two
+   injection-proof domain tools (`explain_ride`, `safety_briefing`) and a 12-question evaluation graded
+   against live data. [Assistant](docs/ASSISTANT.md).
+8. **Operations.** Data quality checks with history (reconciliation, freshness, drift, alert-rate band);
+   the whole chain as one Databricks Job, deployed from git. [Orchestration](docs/ORCHESTRATION.md).
 
-RideOps AI combines three heterogeneous data sources:
+## Screenshots
 
-### ⚡ Operational Events — Streaming
-
-A Python simulator generates realistic ride lifecycles and streams approximately **50 events/sec** to Azure Event Hubs.
-
-`requested → assigned → accepted → arrived → started → completed`
-
-Cancellation can occur at any pre-completion stage.
-
-Passengers, drivers, vehicles, and zones are sampled from live PostgreSQL master data, ensuring that generated events maintain valid foreign-key relationships.
-
-The simulator includes:
-
-- Realistic lifecycle timing and trip durations
-- NYC-style fare calculation
-- Configurable data-quality defect injection
-- Batched event delivery to Azure Event Hubs
-
-### 📊 Historical Market Data — Batch
-
-Public NYC TLC HVFHV trip records provide a historical market benchmark.
-
-The dataset is scoped to **HV0003 (Uber)**, reducing approximately **22M source records to 15.35M records**. Data quality issues identified during profiling follow an explicit **flag, don't drop** strategy.
-
-### 🗄️ Master & Reference Data — Batch Snapshot
-
-Nine PostgreSQL tables are ingested through a metadata-driven Azure Data Factory pipeline:
-
-`Get Metadata → ForEach → Copy`
-
-The pipeline runs through a Self-Hosted Integration Runtime and is configuration-driven, allowing additional source tables to be added without creating new pipeline logic.
-
----
-
-## 🏗️ Medallion Architecture
-
-RideOps AI follows a **Bronze → Silver → Gold lakehouse architecture**.
-
-### 🥉 Bronze — Raw Ingestion
-
-Raw streaming, historical, and master data is landed with schema validation, quarantine handling, and full source lineage.
-
-- Event Hubs → Structured Streaming
-- ADLS Gen2 → Auto Loader
-- PostgreSQL snapshots → Metadata-driven batch ingestion
-- Invalid records → Quarantine tables
-- Source and ingestion metadata attached to every record
-
-### 🥈 Silver — Cleansed & Conformed
-
-The Silver layer handles data quality, conformance, and entity reconstruction.
-
-- SCD Type 2 history tracking for master data
-- Referential integrity validation
-- Watermark-based streaming deduplication
-- Duplicate detection by both `event_id` and lifecycle stage
-- Ride lifecycle reconstruction into one row per `ride_id`
-- Auto CDC with `ignore_null_updates=True`
-- Duration metrics, cancellation analysis, and stale ride detection
-
-### 🥇 Gold — Analytics Star Schema
-
-The Gold layer provides analytics-ready dimensional models.
-
-| Type | Tables |
+| Rider Safety Overview | Alert Queue |
 |---|---|
-| **Dimensions** | 8 |
-| **Facts** | 3 |
-| **Analytics Marts** | 3 |
+| ![overview](docs/images/dashboard-safety-overview.png) | ![queue](docs/images/dashboard-alert-queue.png) |
+| **Ride Timeline** (one caught incident) | **AI assistant** |
+| ![timeline](docs/images/dashboard-ride-timeline.png) | ![assistant](docs/images/assistant-safety.png) |
 
-Key models include:
-
-`dim_date` · `dim_zone` · `dim_passenger` · `dim_driver` · `dim_vehicle`
-
-`fact_ride` · `fact_ride_event` · `fact_fhvhv_trip`
-
-`agg_zone_hourly` · `agg_driver_daily` · `agg_revenue_daily`
-
-Surrogate key generation is selected based on table characteristics, using rebuild-safe keys for stable dimensions and deterministic SHA-256 fingerprints for continuously growing historical fact data.
-
----
-
-## 🛡️ Data Quality Framework
-
-Eight defect types are injected at configurable rates. Each is caught at the layer that can actually detect it.
-
-| # | Defect | Caught At | Why There |
-|---|---|---|---|
-| 1 | Out-of-order events | Silver | Needs arrival-order comparison |
-| 2 | Late-arriving events | Silver | Needs event-time vs processing-time |
-| 3 | Exact duplicates | Silver | Needs cross-row comparison |
-| 4 | Near-duplicates | Silver | Needs cross-row comparison |
-| 5 | Null required fields | **Bronze** | Detectable from one row |
-| 6 | Invalid `event_type` | **Bronze** | Detectable from one row |
-| 7 | Out-of-range values | **Bronze** | Detectable from one row |
-| 8 | Incomplete rides | Silver | Needs the passage of time |
-
-**Bronze catches what a single row reveals. Silver catches what only context reveals.**
-
-Two quarantine tables serve two purposes: `bronze.ride_events_quarantine` holds schema and contract violations, `silver.sv_quarantine` holds cross-table referential integrity failures.
-
-### The Scorecard
-
-`silver.dq_defect_scorecard` reports a **measured count** per defect type, making detection provable rather than asserted.
-
-| defect_id | defect_name | layer | count |
-|---|---|---|---|
-| 1 | out_of_order_events | Bronze/Silver | 801 |
-| 3 | exact_duplicates | Bronze | 250 |
-| 4 | near_duplicates | Bronze | 341 |
-| 5 | null_required_fields | Bronze | 186 |
-| 6 | invalid_event_type | Bronze | 137 |
-| 7 | out_of_range_values | Bronze | 353 |
-| 8 | incomplete_rides | Silver | 427 |
-
----
-
-## 🔍 Reconciliation
-
-Every row is accounted for at each layer boundary, with a documented reason for every transition.
-
-```
-Simulator emits                        3,081 events
-  └─ 39 quarantined at Bronze (defects 5, 6, 7)
-ride_events_raw                        3,042 events
-  └─ 24 removed by Silver dedup (defects 3, 4)
-sv_ride_events                         3,018 events
-sv_ride_state                            531 rides
-  ├─ completed        413
-  ├─ cancelled         75
-  └─ in_flight         43
-fact_ride  531 rides  ·  fact_ride_event  3,018 events
-```
-
-Losses are never assumed benign. Each maps to a specific, intentional rule.
-
----
-
-## 📊 Power BI Dashboard
-
-Five pages over **DirectQuery**, so figures reflect live pipeline state rather than a stale import. 25 measures, 25 relationships, persistent navigation, cross-filtering slicers.
-
-| Page | Answers |
+| Feature separation (EDA) | Holdout verdict (M11) |
 |---|---|
-| Executive Overview | How is the operation performing right now? |
-| Ride Lifecycle & Cancellations | Where in the funnel do rides fail, and why? |
-| Driver Performance | Who is performing well, and on what volume? |
-| Two-World Comparison | How does our demand compare to the NYC market? |
-| Data Quality & Pipeline Health | Are the numbers trustworthy? |
+| ![eda](docs/images/eda/03_key_signal_per_type.png) | ![verdict](docs/images/eda/11_holdout_verdict.png) |
 
-<p align="center">
-  <img src="docs/images/dashboard-executive-overview.png" alt="Executive Overview" width="100%" />
-</p>
+## Engineering lessons (real bugs, found and fixed)
 
-<p align="center">
-  <img src="docs/images/dashboard-data-quality.png" alt="Data Quality & Pipeline Health" width="100%" />
-</p>
-
-**A finding the dashboard surfaced:** 70% of cancellations occur at the `arrived` stage, after the driver has already reached the pickup point. That is the most expensive moment to lose a trip, and it is invisible without reconstructing ride state from raw events.
-
----
-
-## 🤖 AI Assistant
-
-A natural-language interface over the same Gold layer. Ask in plain English, get an answer plus the SQL that produced it.
-
-<p align="center">
-  <img src="docs/images/ai-assistant.png" alt="RideOps AI Assistant" width="100%" />
-</p>
-
-**Governance is layered, not assumed.** Schema scoping means the agent never *sees* Bronze or Silver. Execution-time guardrails mean it cannot *reach* them even with a fully-qualified query — a distinction verified empirically, since schema scoping alone proved insufficient.
-
-Four guardrail layers: read-only enforcement, table whitelist, row limits, comment-aware keyword scanning.
-
-**Deliberately lightweight.** No vector store, no RAG, no multi-agent orchestration. Fourteen tables fit comfortably in context; retrieval infrastructure would add complexity without adding capability.
-
----
-
-## 🐛 Engineering Challenges
-
-Five production-grade defects found and fixed. Three were **silent** — the pipeline reported success while producing wrong data.
-
-| Symptom | Root Cause | Fix |
+| Symptom | Root cause | Fix |
 |---|---|---|
-| Zero completed rides; one sat open 5.5 days against an 8-minute lifecycle | Fare fields serialized with `str()` against a `DoubleType` schema — Spark rejected the whole record into `_corrupt_record` | `float()` instead of `str()` |
-| 1,234 cancelled events quarantined as `malformed_json` | `CANCELLATION_REASONS.get(4, 4)` returned the dict *value* (`"Payment Failed"`) instead of the key | Use the integer key directly |
-| `Avg Fare` reported **$960.73** on trips capped near $40 | Out-of-range check tested only for *negative* values; the injector also produces `99999.99` | Added upper bounds — corrected to **$37.18** |
-| Defect 5 fired at its configured rate but quarantined nothing | Injector nulled `payment_method_id`, a field Bronze's contract never checks | Aligned injector to Bronze's `STAGE_REQUIRED_FIELDS` |
-| Two Power BI cards errored under any filter | `COUNTROWS()` cannot fold to SQL once a filter crosses a relationship | `CALCULATE(COUNT(fact_ride[ride_id]))` |
+| 1 % of normal trips looked like GPS spoofing | Last ping arrived 0.05 s after the previous; 4 m of GPS noise read as 600 km/h | No speed from pings < 2 s apart: 10 false jumps per 1k trips → 0 |
+| Model card and dashboard could disagree | Metrics computed twice (Python, Spark) | Spark Gold tested equal to `ml/metrics.py` on real data; the test caught a false-alarm definition mismatch |
+| Model failed on Databricks | Wrapper class pickled from `__main__` (Python 3.11 bytecode) on a 3.12 cluster; "models from code" stored a Windows path | Wrapper in its own module (pickled by reference); test that the package is portable |
+| New model version ignored | Spark cached the package by URI `@champion` | Resolve the alias to a version before scoring |
+| Job failed only on Databricks | ANSI mode: division by zero for live rides (no incidents) | `try_divide`; local tests now run in ANSI mode |
+| Power BI cards failed at random | 10+ concurrent DirectQuery queries per page on a small warehouse | Composite model: Import + DirectQuery + Dual |
+| An LLM answer was wrong but sounded right | It quoted a number from its instructions instead of the data | Caught by the eval; prompt rule "compute from tables first" |
 
-The revenue bug is the one worth dwelling on: the number *looked* plausible until the distribution was queried directly. **0.9% of rides accounted for 96% of reported revenue.**
-
----
-
-## 🧭 Design Decisions
-
-| ID | Decision | Reasoning |
-|---|---|---|
-| ADR-001 | Bronze catches only single-row defects | Cross-row detection needs state Bronze doesn't have |
-| ADR-002 | Two worlds never merged | No shared entities, no overlapping time range — a union would fabricate a relationship |
-| ADR-003 | Flag, don't drop | Soft signals become boolean columns; only hard violations are quarantined |
-| ADR-004 | HV0003 filter applied in Silver | Business scope, not data quality — Bronze keeps all 22M rows so scope can widen |
-| ADR-005 | SCD2 in Silver, current-only in Gold | History preserved where cheap; presentation layer stays simple |
-| ADR-006 | 45-minute watermark | Sized against the injector's own worst-case hold-back window |
-| ADR-007 | No dbt | Value lies in portability and team handoffs — neither applies here |
-| ADR-008 | Minimal orchestration | Lakeflow resolves layer dependencies natively; scheduling added only where a real gap existed |
-
----
-
-## 📁 Repository Structure
+## Repository
 
 ```
-RideOps-AI/
-├── simulator.py                 # Ride event simulator entry point
-├── config/
-│   └── simulator_config.yaml    # Rates, defect injection, scenarios
-├── database/
-│   ├── ddl/                     # PostgreSQL master schema (9 tables)
-│   ├── generators/              # Entity pool, ride events, fares, defect injection, Event Hubs emitter
-│   └── utils/                   # Config loader, timing model, fare calculator
-├── tests/                       # Simulator unit tests (pytest)
-├── adf/                         # Azure Data Factory ARM export (2 pipelines, 5 datasets)
-├── databricks/
-│   ├── pipeline_settings.json   # Lakeflow pipeline config (secrets referenced, not stored)
-│   └── pipelines/
-│       ├── bronze/              # Event Hubs (Kafka), Auto Loader, Postgres snapshots
-│       ├── silver/              # Dedup, ride state (Auto CDC), SCD2, FHVHV, DQ scorecard
-│       └── gold/                # Dimensions, facts, aggregate marts
-├── RideOps Dashboard/           # Power BI project (PBIP)
-├── assistant/
-│   ├── src/
-│   │   ├── connection.py        # SQLAlchemy → Databricks, Gold-scoped
-│   │   ├── agent.py             # LangGraph ReAct agent
-│   │   ├── guardrails.py        # Read-only, whitelist, row limit
-│   │   └── prompts.py           # Domain context
-│   └── app.py                   # Streamlit chat UI
-├── data/                        # Zone lookup + FHVHV profiling report (raw trip files not committed)
-└── docs/images/                 # Architecture and dashboard screenshots
+simulation/, geodata/   simulator v2 (road network, calibration, incidents, live + backfill)
+database/, adf/         PostgreSQL master data, Azure Data Factory pipelines (ARM export)
+databricks/
+  pipelines/            Lakeflow: bronze/, silver/, gold/ (incl. build_gps_silver.py)
+  utilities/            safety_features.py, shared by pipeline and training
+  jobs/                 score_safety, build_safety_gold, run_dq_checks + job definition
+  deploy_job.py         deploys the job from git
+ml/                     labels, metrics, rules, training, detector, MLflow packaging
+notebooks/              10_safety_eda.ipynb, 11_safety_models.ipynb
+RideOps Dashboard/      Power BI project (PBIP: TMDL model + PBIR report, plain text)
+assistant/              LangGraph assistant, domain tools, evaluation, demo questions
+tests/                  286 tests (pytest, local Spark in ANSI mode)
+docs/                   design, findings, model card, dashboard, assistant, orchestration
 ```
 
----
-
-## ⚙️ Running It
-
-**Prerequisites:** Azure subscription (Event Hubs, Data Factory, ADLS Gen2), Databricks workspace with Unity Catalog, PostgreSQL, Python 3.12+
+## Running it
 
 ```bash
-# 1. Seed the source database
-psql -f database/ddl/schema.sql
-python database/seed/seed_master_data.py
-
-# 2. Configure — copy .env.example to .env and fill in
-#    POSTGRES_*, EVENT_HUBS_CONNECTION_STRING, EVENT_HUBS_HUB_NAME
-
-# 3. Create a Lakeflow pipeline pointed at transformations/
-#    Target catalog: rideops_ai · Mode: Continuous
-#    Config: RideOps-Eventhub-Namespace, RideOps-Eventhub, connection_string
-
-# 4. Generate data
-python simulator.py --duration=1200
-
-# 5. Full-refresh dq_defect_scorecard (see Known Limitations)
-
-# 6. Run the assistant
-cd rideops-assistant && pip install -r requirements.txt && streamlit run app.py
+uv sync                                                   # Python 3.11 environment
+python -m geodata.build_road_network                      # NYC road graph (once)
+python -m simulation.run backfill --rides 50000 --start 2026-05-04 --days 7   # training data
+python -m ml.build_features && python -m ml.train         # features, models, MLflow
+python -m ml.serving --target databricks                  # register @champion (needs .env)
+python databricks/deploy_job.py --run                     # deploy + run the Databricks job
+python -m simulation.run live --rate 1 --duration 1800    # live GPS to Event Hubs
+pytest                                                    # 286 tests
 ```
 
----
+Secrets live in `.env` (see `.env.example`); nothing secret is committed.
 
-## ⚠️ Known Limitations
+## Documentation
 
-Documented rather than hidden.
+| Doc | What it covers |
+|---|---|
+| [PROJECT_BRIEF](docs/PROJECT_BRIEF.md) | Problem, users, scope, success metrics |
+| [DATA_DESIGN](docs/DATA_DESIGN.md) | Sources, contracts, layers, tables, quality rules, decisions (ADRs) |
+| [EDA_FINDINGS](docs/EDA_FINDINGS.md) | What the data showed and the decisions it drove |
+| [MODEL_CARD](docs/MODEL_CARD.md) | Model, data, results, limits, fairness, monitoring |
+| [DASHBOARD](docs/DASHBOARD.md) | Pages and model design |
+| [ASSISTANT](docs/ASSISTANT.md) | Agent, tools, guardrails, evaluation |
+| [ORCHESTRATION](docs/ORCHESTRATION.md) | The Databricks Job and what is still manual |
+| [V1_PLATFORM](docs/V1_PLATFORM.md) | The original operations platform: 8 injected defects, reconciliation, star schema |
 
-- **`dq_defect_scorecard` needs a manual refresh.** As a batch table downstream of streaming sources, it does not reliably re-trigger in Continuous mode.
-- **Assume Referential Integrity drops NULL-key rows.** Enabled for DirectQuery performance. Rides whose `requested` event was quarantined carry a NULL `date_key` and are excluded from date-sliced visuals — a deliberate, quantified trade-off.
-- **Non-overlapping time ranges.** Operational and historical data cover different periods, so cross-world comparison is volumetric and geographic, not temporal.
-- **Metric definitions are explicit.** `Cancellation Rate` divides by all rides including in-flight; `Completion Rate (Settled)` divides only by concluded rides. Both are exposed so the distinction is visible.
-- **The simulator stands in for a production event source.** In a real system these events come from the ride-hailing application itself.
+## Limits
 
----
-
-## 🚀 What's Next
-
-- Databricks Workflows for the batch ingestion paths, closing the scorecard refresh gap
-- Overlapping time ranges between the two worlds, making comparison temporal as well as geographic
-- Point-in-time joins against the SCD2 history already retained in Silver
-- A semantic layer so the assistant uses canonical metric definitions rather than deriving them per query
+Simulated GPS and incidents: real-world precision would be lower, and the threshold must be re-tuned on real
+outcomes (agent feedback as labels). The model sees trip geometry and timing only, no rider or driver identity.
+About 6 % of incidents look exactly like harmless behaviour in GPS alone; closing that gap needs another signal
+(in-app SOS, rider check-in).

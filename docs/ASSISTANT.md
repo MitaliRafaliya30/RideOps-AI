@@ -5,8 +5,10 @@ A LangGraph ReAct agent (via OpenRouter) writes SQL against Databricks, or calls
 
 ```
 cd assistant
-<venv>\Scripts\streamlit run app.py      # chat UI, shows the SQL / tool behind every answer
-python eval_safety.py                     # 12-question evaluation, writes eval_results.json
+uv venv .venv --python 3.12                                         # first time only
+uv pip install -r requirements.txt --python .venv\Scripts\python.exe  # first time only
+.venv\Scripts\streamlit run app.py    # chat UI, shows the SQL / tool behind every answer
+.venv\Scripts\python eval_safety.py  # 12-question evaluation, writes eval_results.json
 ```
 
 ## How it answers

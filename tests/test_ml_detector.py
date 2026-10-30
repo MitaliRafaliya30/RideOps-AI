@@ -57,3 +57,12 @@ def test_save_and_load_give_identical_scores(detector, data, tmp_path):
     loaded = SafetyDetector.load(path)
     assert np.allclose(loaded.risk(data), detector.risk(data))
     assert loaded.threshold == detector.threshold
+
+
+def test_weak_reasons_are_dropped(detector, data):
+    alerted = data[detector.alerts(data)["alert_source"] == "model"].head(50)
+    full = detector.top_contributions(alerted, min_share=0.0)
+    trimmed = detector.top_contributions(alerted)
+    assert all(t[0] == f[0] for t, f in zip(trimmed, full))            # the strongest reason always stays
+    assert all(len(t) <= len(f) for t, f in zip(trimmed, full))
+    assert any(len(t) < len(f) for t, f in zip(trimmed, full))         # and weak ones go

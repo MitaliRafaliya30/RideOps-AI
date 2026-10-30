@@ -3,7 +3,9 @@ RIDEOPS AI ASSISTANT - DEMO AND TEST QUESTIONS
 
 How to start:
   cd RideOps-AI\assistant
-  ..\..\rideops-assistant\.venv\Scripts\streamlit run app.py
+  .venv\Scripts\streamlit run app.py
+  (first time only: uv venv .venv --python 3.12
+                    uv pip install -r requirements.txt --python .venv\Scripts\python.exe)
 
 Tips:
   - After each answer, open "View SQL" to show what ran (SQL or domain tool).

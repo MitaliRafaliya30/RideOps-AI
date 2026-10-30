@@ -1,0 +1,57 @@
+{
+  "name": "RideOps Safety Pipeline",
+  "description": "End-to-end rider safety run: Lakeflow pipeline (Bronze -> Silver -> Gold) -> score every 60 s window with the @champion model -> build the safety Gold tables -> data quality checks. Defined in databricks/jobs/rideops_safety_job.json, deployed with databricks/deploy_job.py.",
+  "tags": {"project": "rideops-ai", "milestone": "M15"},
+  "max_concurrent_runs": 1,
+  "timeout_seconds": 7200,
+  "queue": {"enabled": true},
+  "schedule": {
+    "quartz_cron_expression": "0 0 6 * * ?",
+    "timezone_id": "Asia/Kolkata",
+    "pause_status": "PAUSED"
+  },
+  "email_notifications": {
+    "on_failure": ["${USER}"],
+    "no_alert_for_skipped_runs": true
+  },
+  "tasks": [
+    {
+      "task_key": "refresh_pipeline",
+      "description": "Incremental update of the Lakeflow pipeline (never a full refresh: Bronze streaming tables keep their history)",
+      "pipeline_task": {"pipeline_id": "${PIPELINE_ID}", "full_refresh": false},
+      "timeout_seconds": 3600,
+      "max_retries": 1,
+      "min_retry_interval_millis": 300000
+    },
+    {
+      "task_key": "score_safety",
+      "description": "Score every window of silver.sv_ride_live_features with the registered @champion model",
+      "depends_on": [{"task_key": "refresh_pipeline"}],
+      "notebook_task": {"notebook_path": "${JOBS_DIR}/score_safety", "source": "WORKSPACE"},
+      "timeout_seconds": 1800,
+      "max_retries": 2,
+      "min_retry_interval_millis": 120000,
+      "retry_on_timeout": true
+    },
+    {
+      "task_key": "build_safety_gold",
+      "description": "Rebuild dim_incident_type, fact_ride_safety, agg_safety_hourly, ml_model_performance",
+      "depends_on": [{"task_key": "score_safety"}],
+      "notebook_task": {"notebook_path": "${JOBS_DIR}/build_safety_gold", "source": "WORKSPACE"},
+      "timeout_seconds": 1800,
+      "max_retries": 2,
+      "min_retry_interval_millis": 120000,
+      "retry_on_timeout": true
+    },
+    {
+      "task_key": "run_dq_checks",
+      "description": "Data quality checks; runs even when an earlier task failed, so the failure is recorded in gold.dq_check_results",
+      "depends_on": [{"task_key": "build_safety_gold"}],
+      "run_if": "ALL_DONE",
+      "notebook_task": {"notebook_path": "${JOBS_DIR}/run_dq_checks", "source": "WORKSPACE"},
+      "timeout_seconds": 1800,
+      "max_retries": 1,
+      "min_retry_interval_millis": 120000
+    }
+  ]
+}

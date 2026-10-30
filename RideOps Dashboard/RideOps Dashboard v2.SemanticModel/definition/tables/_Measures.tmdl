@@ -100,6 +100,160 @@ table _Measures
 		formatString: #,##0
 		lineageTag: 23203878-4fe5-4096-94f4-30d8fe92da14
 
+	measure 'Rides Tracked' = COUNTROWS(fact_ride_safety)
+		formatString: #,##0
+		displayFolder: Safety
+		lineageTag: ecbd5bfb-be20-4662-995b-03235334aa89
+
+	measure 'Alerted Rides' = CALCULATE([Rides Tracked], fact_ride_safety[has_alert] = TRUE())
+		formatString: #,##0
+		displayFolder: Safety
+		lineageTag: 32d0f1fa-2a0c-4bc1-9e4e-4d35c520b611
+
+	measure 'Alerted Rides per 1k' = DIVIDE([Alerted Rides], [Rides Tracked]) * 1000
+		formatString: 0.0
+		displayFolder: Safety
+		lineageTag: 3f603fbf-0482-4e5a-b78b-3d71c6aac52d
+
+	measure 'Safety Alerts' = COUNTROWS(fact_safety_alert)
+		formatString: #,##0
+		displayFolder: Safety
+		lineageTag: 48239468-aeaa-4c29-9287-067ff4e9de8a
+
+	measure 'High Severity Alerts' = CALCULATE([Safety Alerts], dim_incident_type[severity] = "high")
+		formatString: #,##0
+		displayFolder: Safety
+		lineageTag: f85044a6-7f28-428a-9dbb-8d67c6ed59db
+
+	measure 'Avg Minutes to First Alert' = AVERAGE(fact_ride_safety[minutes_to_first_alert])
+		formatString: 0.0
+		displayFolder: Safety
+		lineageTag: 4434eb9e-31ee-4b6e-a869-aa448d244b3a
+
+	measure 'Avg Max Risk' = AVERAGE(fact_ride_safety[max_risk_score])
+		formatString: 0.000
+		displayFolder: Safety
+		lineageTag: b8f8acc6-82c7-40da-b907-ac9ac34665f0
+
+	measure 'Risk Score' = MAX(safety_window_scores[risk_score])
+		formatString: 0.000
+		displayFolder: Safety
+		lineageTag: 1b5c91dd-e6f7-47ea-99a7-cc1892890c51
+
+	measure 'Alerts (Hourly Mart)' = SUM(agg_safety_hourly[alerted_rides])
+		formatString: #,##0
+		displayFolder: Safety
+		lineageTag: e409798e-f21c-4588-a999-3295805b2c58
+
+	measure 'Alerted Rides per 1k (Hourly Mart)' = DIVIDE(SUM(agg_safety_hourly[alerted_rides]), SUM(agg_safety_hourly[rides_tracked])) * 1000
+		formatString: 0.0
+		displayFolder: Safety
+		lineageTag: 21791e51-10e2-4579-94c6-21fbaa3d0dff
+
+	measure 'Incidents (Ground Truth)' = CALCULATE([Rides Tracked], fact_ride_safety[has_ground_truth] = TRUE(), NOT ISBLANK(fact_ride_safety[true_incident_type]))
+		formatString: #,##0
+		displayFolder: Model
+		lineageTag: 3a06d688-d803-48dd-bca1-efd7718abe7d
+
+	measure 'Incidents Caught' = CALCULATE([Rides Tracked], fact_ride_safety[outcome] = "caught")
+		formatString: #,##0
+		displayFolder: Model
+		lineageTag: 361e1a50-3b76-4386-a7a4-9d07f24c045a
+
+	measure 'Incidents Missed' = CALCULATE([Rides Tracked], fact_ride_safety[outcome] = "missed")
+		formatString: #,##0
+		displayFolder: Model
+		lineageTag: 99bdd2cc-9dd2-40d0-9648-99aaa44a56f1
+
+	measure 'False Alarm Rides' = CALCULATE([Rides Tracked], fact_ride_safety[false_alarm] = TRUE())
+		formatString: #,##0
+		displayFolder: Model
+		lineageTag: 0ffbdf48-d1ac-4deb-9ef9-84400a4f0ba5
+
+	measure Recall = DIVIDE([Incidents Caught], [Incidents (Ground Truth)])
+		formatString: 0.0%
+		displayFolder: Model
+		lineageTag: c5e7eb56-2946-4286-b9e7-a3e7eabeceda
+
+	measure Precision = DIVIDE([Incidents Caught], CALCULATE([Alerted Rides], fact_ride_safety[has_ground_truth] = TRUE()))
+		formatString: 0.0%
+		displayFolder: Model
+		lineageTag: 0a4ec292-5e07-4dc8-8a1b-a3cc84b17d81
+
+	measure 'False Alarms per 1k' = DIVIDE([False Alarm Rides], CALCULATE([Rides Tracked], fact_ride_safety[has_ground_truth] = TRUE())) * 1000
+		formatString: 0.00
+		displayFolder: Model
+		lineageTag: 721a0b0d-1695-4d89-a1b9-0cc69249b193
+
+	measure 'Avg Detection Delay (min)' = CALCULATE(AVERAGE(fact_ride_safety[detection_delay_s]), fact_ride_safety[outcome] = "caught") / 60
+		formatString: 0.0
+		displayFolder: Model
+		lineageTag: 07e8ecf9-92cf-4642-8fa2-9dea5c3dd4d4
+
+	measure 'Daily Recall' = CALCULATE(DIVIDE(SUM(ml_model_performance[caught]), SUM(ml_model_performance[incidents])), ml_model_performance[has_ground_truth] = TRUE())
+		formatString: 0.0%
+		displayFolder: Model
+		lineageTag: 7d1a497f-8874-4d22-9560-af488d3dbb0e
+
+	measure 'Daily False Alarms per 1k' = CALCULATE(DIVIDE(SUM(ml_model_performance[false_alarm_rides]), SUM(ml_model_performance[rides])) * 1000, ml_model_performance[has_ground_truth] = TRUE())
+		formatString: 0.00
+		displayFolder: Model
+		lineageTag: 4ed9b24f-89cd-4f6b-b78b-c059ed5b92c8
+
+	measure 'DQ Last Run' = CALCULATE(MAX(dq_check_results[checked_at]), ALL(dq_check_results))
+		formatString: dd MMM HH:mm
+		displayFolder: Data Quality
+		lineageTag: a5b9dc00-2b29-413e-a451-6a87ba225363
+
+	measure 'DQ Checks (Last Run)' = VAR last = CALCULATE(MAX(dq_check_results[checked_at]), ALL(dq_check_results)) RETURN CALCULATE(COUNTROWS(dq_check_results), dq_check_results[checked_at] = last)
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: 5b446123-98df-40f1-9a25-4d8522afe65b
+
+	measure 'DQ Passed (Last Run)' = VAR last = CALCULATE(MAX(dq_check_results[checked_at]), ALL(dq_check_results)) RETURN CALCULATE(COUNTROWS(dq_check_results), dq_check_results[checked_at] = last, dq_check_results[status] = "pass") + 0
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: 0a58335f-e006-4f6e-a013-6c71878521b7
+
+	measure 'DQ Warnings (Last Run)' = VAR last = CALCULATE(MAX(dq_check_results[checked_at]), ALL(dq_check_results)) RETURN CALCULATE(COUNTROWS(dq_check_results), dq_check_results[checked_at] = last, dq_check_results[status] = "warn") + 0
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: d0bfa65f-886c-4410-bdfe-29bc7454ec18
+
+	measure 'DQ Failures (Last Run)' = VAR last = CALCULATE(MAX(dq_check_results[checked_at]), ALL(dq_check_results)) RETURN CALCULATE(COUNTROWS(dq_check_results), dq_check_results[checked_at] = last, dq_check_results[status] = "fail") + 0
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: 6576a877-18fa-4f27-bfdc-f74919b42ed8
+
+	measure 'DQ Skipped (Last Run)' = VAR last = CALCULATE(MAX(dq_check_results[checked_at]), ALL(dq_check_results)) RETURN CALCULATE(COUNTROWS(dq_check_results), dq_check_results[checked_at] = last, dq_check_results[status] = "skipped") + 0
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: 6da7791e-31a4-4309-ad19-4075e94f1816
+
+	measure 'DQ Pass Rate (Last Run)' = DIVIDE([DQ Passed (Last Run)], [DQ Checks (Last Run)] - [DQ Skipped (Last Run)])
+		formatString: 0.0%
+		displayFolder: Data Quality
+		lineageTag: 7bc0009a-f28a-412c-abc6-4e8208fc08a9
+
+	measure 'DQ Checks' = COUNTROWS(dq_check_results)
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: 9ae1d3a0-5e08-4090-b7ea-e123cca94fd7
+
+	measure 'Alerts on Ride' = COALESCE([Safety Alerts], 0)
+		formatString: 0
+		displayFolder: Safety
+		lineageTag: 4a641479-ae69-41c4-8583-1c2d0698857e
+
+	measure 'First Alert (min)' = IF(ISBLANK([Avg Minutes to First Alert]), "no alert", FORMAT([Avg Minutes to First Alert], "0.0"))
+		displayFolder: Safety
+		lineageTag: 11504a87-0d70-4926-ad03-d80e58446499
+
+	measure 'Bronze Contract Violations' = CALCULATE(SUM(dq_defect_scorecard[count]), dq_defect_scorecard[defect_id] IN {5, 6, 7})
+		formatString: #,##0
+		displayFolder: Data Quality
+		lineageTag: da050101-9474-42c1-8981-bdb7ec6e1465
+
 	column Value
 		isHidden
 		lineageTag: 6203282b-9b96-4ac3-b2f1-9c8c4b29e9f2

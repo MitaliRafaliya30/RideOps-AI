@@ -116,6 +116,8 @@ def test_spark_scoring_and_one_alert_per_ride_and_type(spark, job, model_uri, wi
     udf = mlflow.pyfunc.spark_udf(spark, model_uri, result_type=OUTPUT_DDL, env_manager="local")
     scores = job.score_windows(spark.createDataFrame(windows), udf, MODEL_FEATURES).toPandas()
     assert len(scores) == len(windows)
+    calm = scores[~scores["alert"]]
+    assert calm["alert_type"].isna().all() and calm["reasons"].isna().all()       # real NULLs, not "nan" / "None"
 
     expected = SafetyDetector.load(Path(mlflow.pyfunc.load_model(model_uri)._model_impl.context.artifacts["detector"]))
     direct = windows[["ride_id", "window_index"]].join(expected.alerts(windows))

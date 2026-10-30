@@ -1,0 +1,123 @@
+/// Data quality check results, one row per check per run (history kept)
+table dq_check_results
+	lineageTag: 4523f1df-a923-44f1-971e-f3e9925338af
+
+	column check_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0fb6a09c-a005-46f6-a87a-9d56053ac011
+		summarizeBy: none
+		sourceColumn: check_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column category
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 25e0f128-f382-4ccd-be5d-d0a6de8339ef
+		summarizeBy: none
+		sourceColumn: category
+
+		annotation SummarizationSetBy = Automatic
+
+	column table_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: e69a025c-1003-4661-94f1-d741f1e0e026
+		summarizeBy: none
+		sourceColumn: table_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: a81e835f-d929-408e-8487-c48e0f5d9322
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column value
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 0e7809c5-e868-48ba-a8df-407ba34ef6d1
+		summarizeBy: none
+		sourceColumn: value
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column warn_threshold
+		dataType: double
+		sourceProviderType: double
+		lineageTag: a0c22b92-9c7e-4f59-98cf-8489a1701581
+		summarizeBy: none
+		sourceColumn: warn_threshold
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column fail_threshold
+		dataType: double
+		sourceProviderType: double
+		lineageTag: e7e8844f-ea3f-4e3d-9220-fce12df5e5d8
+		summarizeBy: none
+		sourceColumn: fail_threshold
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column status
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 9cf245e8-0b49-4876-acdf-d25c3668312c
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column details
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 61eb01de-a638-441e-b36c-b9c77b97e0fb
+		summarizeBy: none
+		sourceColumn: details
+
+		annotation SummarizationSetBy = Automatic
+
+	column run_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: d6f1daa6-9a73-432a-a960-314183cb35fe
+		summarizeBy: none
+		sourceColumn: run_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column checked_at
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 2cf73be2-c6f8-40d5-abe9-9c759f2975e9
+		summarizeBy: none
+		sourceColumn: checked_at
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dq_check_results = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    rideops_ai_Database = Source{[Name="rideops_ai",Kind="Database"]}[Data],
+				    gold_Schema = rideops_ai_Database{[Name="gold",Kind="Schema"]}[Data],
+				    dq_check_results_Table = gold_Schema{[Name="dq_check_results",Kind="Table"]}[Data]
+				in
+				    dq_check_results_Table
+
+	annotation PBI_ResultType = Table
+

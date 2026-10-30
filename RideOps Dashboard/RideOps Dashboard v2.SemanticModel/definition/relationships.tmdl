@@ -126,3 +126,43 @@ relationship agg_driverdaily_driver
 	fromColumn: agg_driver_daily.driver_key
 	toColumn: dim_driver.driver_key
 
+relationship fact_ride_safety_date
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_safety.date_key
+	toColumn: dim_date.date_key
+
+relationship fact_ride_safety_zone
+	relyOnReferentialIntegrity
+	fromColumn: fact_ride_safety.pickup_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship fact_safety_alert_ride
+	relyOnReferentialIntegrity
+	fromColumn: fact_safety_alert.ride_id
+	toColumn: fact_ride_safety.ride_id
+
+relationship fact_safety_alert_type
+	relyOnReferentialIntegrity
+	fromColumn: fact_safety_alert.alert_type
+	toColumn: dim_incident_type.alert_type
+
+relationship safety_window_scores_ride
+	relyOnReferentialIntegrity
+	fromColumn: safety_window_scores.ride_id
+	toColumn: fact_ride_safety.ride_id
+
+relationship agg_safety_hourly_zone
+	relyOnReferentialIntegrity
+	fromColumn: agg_safety_hourly.pickup_zone_key
+	toColumn: dim_zone.zone_key
+
+relationship agg_safety_hourly_date
+	relyOnReferentialIntegrity
+	fromColumn: agg_safety_hourly.date_key
+	toColumn: dim_date.date_key
+
+relationship ml_model_performance_date
+	relyOnReferentialIntegrity
+	fromColumn: ml_model_performance.date_key
+	toColumn: dim_date.date_key
+

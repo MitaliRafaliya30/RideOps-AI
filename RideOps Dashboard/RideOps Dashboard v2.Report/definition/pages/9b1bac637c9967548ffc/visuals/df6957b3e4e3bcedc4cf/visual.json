@@ -1,13 +1,13 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "df6957b3e4e3bcedc4cf",
   "position": {
-    "x": 730,
+    "x": 910,
     "y": 57,
-    "z": 3000,
+    "z": 4000,
     "height": 95,
-    "width": 535,
-    "tabOrder": 3000
+    "width": 355,
+    "tabOrder": 4000
   },
   "visual": {
     "visualType": "card",
@@ -82,7 +82,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'● TOTAL QUARANTINED RECORDS'"
+                  "Value": "'● SILVER QUARANTINE (REFERENCE CHECKS)'"
                 }
               }
             },

@@ -41,7 +41,7 @@ table dim_zone
 		annotation SummarizationSetBy = Automatic
 
 	partition dim_zone = m
-		mode: directQuery
+		mode: dual
 		source =
 				let
 				    Source = Databricks.Catalogs("dbc-f9e84516-8a10.cloud.databricks.com", "/sql/1.0/warehouses/5f9f8922ba4ab9c5", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),

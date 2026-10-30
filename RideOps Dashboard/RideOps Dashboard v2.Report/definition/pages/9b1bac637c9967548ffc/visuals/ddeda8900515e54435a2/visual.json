@@ -1,13 +1,13 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.11.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "ddeda8900515e54435a2",
   "position": {
     "x": 190,
     "y": 432,
-    "z": 5000,
+    "z": 6000,
     "height": 277,
     "width": 535,
-    "tabOrder": 5000
+    "tabOrder": 6000
   },
   "visual": {
     "visualType": "clusteredBarChart",
@@ -223,7 +223,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Quarantined Records by Source'"
+                  "Value": "'Silver Quarantine by Source (reference checks)'"
                 }
               }
             },
